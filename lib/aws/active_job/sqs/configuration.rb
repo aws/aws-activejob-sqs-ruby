@@ -12,7 +12,6 @@ module Aws
           backpressure: 10,
           max_messages: 10,
           shutdown_timeout: 15,
-          retry_standard_errors: true, # TODO: Remove in next MV
           queues: {},
           logger: ::Rails.logger,
           message_group_id: 'SqsActiveJobGroup',
@@ -29,12 +28,6 @@ module Aws
           url max_messages
           visibility_timeout message_group_id
         ].freeze
-
-        # @api private
-        attr_accessor :queues, :threads, :backpressure,
-                      :shutdown_timeout, :client, :logger,
-                      :max_messages, :visibility_timeout,
-                      :async_queue_error_handler
 
         # Don't use this method directly: Configuration is a singleton class, use
         # +Aws::ActiveJob::SQS.config+ to access the singleton config.
@@ -80,15 +73,18 @@ module Aws
         #   will not be deleted from the SQS queue and will be retryable after
         #   the visibility timeout.
         #
-        # @option options [Boolean] :retry_standard_errors
-        #   If `true`, StandardErrors raised by ActiveJobs are left on the queue
-        #   and will be retried (pending the SQS Queue's redrive/DLQ/maximum receive settings).
-        #   This behavior overrides the standard Rails ActiveJob
-        #   [Retry/Discard for failed jobs](https://guides.rubyonrails.org/active_job_basics.html#retrying-or-discarding-failed-jobs)
-        #   behavior.  When set to `true` the retries provided by this will be
-        #   on top of any retries configured on the job with `retry_on`.
-        #   When `false`, retry behavior is fully configured
-        #   through `retry_on`/`discard_on` on the ActiveJobs.
+        # @option options [Callable] :poller_error_handler and error handler to
+        #   be called when the poller encounters an error running a job.  Called
+        #   with exception, sqs_message. You may re-raise the exception to
+        #   terminate the poller. You may also choose whether to delete the
+        #   sqs_message or not.  If the message is not explicitly deleted
+        #   then the message will be left on the queue and will be
+        #   retried (pending the SQS Queue's redrive/DLQ/maximum receive settings).
+        #   Retries provided by this mechnaism be on top of any retries
+        #   configured on the job with `retry_on`.
+        #
+        #   This method is only for errors not handled by ActiveJob's
+        #   [Retry/Discard handling](https://guides.rubyonrails.org/active_job_basics.html#retrying-or-discarding-failed-jobs)
         #
         # @option options [ActiveSupport::Logger] :logger Logger to use
         #   for the poller.
@@ -127,10 +123,11 @@ module Aws
         end
 
         # @api private
-        attr_accessor :queues, :max_messages, :visibility_timeout,
+        attr_accessor :queues, :threads, :backpressure,
+                      :max_messages, :visibility_timeout,
                       :shutdown_timeout, :client, :logger,
                       :async_queue_error_handler, :message_group_id,
-                      :retry_standard_errors
+                      :poller_error_handler
 
         attr_reader :excluded_deduplication_keys
 
