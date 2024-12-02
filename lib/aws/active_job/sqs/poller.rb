@@ -68,8 +68,7 @@ module Aws
           config = Aws::ActiveJob::SQS.config
           queue = @options[:queue]
           queue_url = config.url_for(queue)
-          client = config.client
-          @poller = Aws::SQS::QueuePoller.new(queue_url, client: client)
+          @poller = Aws::SQS::QueuePoller.new(queue_url, client: config.client)
           poller_options = {
             skip_delete: true,
             max_number_of_messages: config.max_messages_for(queue),
@@ -86,6 +85,10 @@ module Aws
 
           @logger.info "Polling on: #{queue} => #{queue_url} with options=#{poller_options}"
 
+          _poll(config.client, poller_options, queue_url, single_message)
+        end
+
+        def _poll(client, poller_options, queue_url, single_message)
           @poller.poll(poller_options) do |msgs|
             msgs = [msgs] if single_message
             @logger.info "Processing batch of #{msgs.length} messages"

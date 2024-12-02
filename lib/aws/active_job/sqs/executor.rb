@@ -15,6 +15,20 @@ module Aws
           fallback_policy: :abort # Concurrent::RejectedExecutionError must be handled
         }.freeze
 
+        class << self
+          def on_stop(&block)
+            lifecycle_hooks[:stop] << block
+          end
+
+          def lifecycle_hooks
+            @lifecycle_hooks ||= Hash.new { |h, k| h[k] = [] }
+          end
+
+          def clear_hooks
+            @lifecycle_hooks = nil
+          end
+        end
+
         def initialize(options = {})
           @executor = Concurrent::ThreadPoolExecutor.new(DEFAULTS.merge(options))
           @error_handler = options[:error_handler]
@@ -33,6 +47,7 @@ module Aws
         end
 
         def shutdown(timeout = nil)
+          run_hooks_for(:stop)
           @executor.shutdown
           clean_shutdown = @executor.wait_for_termination(timeout)
           if clean_shutdown
@@ -71,6 +86,12 @@ module Aws
           ensure
             @task_complete.set
           end
+        end
+
+        def run_hooks_for(event_name)
+          return unless (hooks = self.class.lifecycle_hooks[event_name])
+
+          hooks.each(&:call)
         end
       end
     end

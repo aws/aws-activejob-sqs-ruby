@@ -82,6 +82,29 @@ module Aws
             expect(tp).to receive(:wait_for_termination).with(5).and_return true
             executor.shutdown(5)
           end
+
+          describe 'when lifecycle hooks are registered' do
+            let(:hook) { double }
+
+            before do
+              allow(hook).to receive(:call)
+            end
+
+            after do
+              Executor.clear_hooks
+            end
+
+            it 'executs hook when shutdown' do
+              Aws::ActiveJob::SQS.on_worker_stop do
+                hook.call
+              end
+              executor = Executor.new
+
+              executor.shutdown
+
+              expect(hook).to have_received(:call)
+            end
+          end
         end
       end
     end

@@ -51,6 +51,8 @@ module Aws
 
         context 'ENV set' do
           Configuration::GLOBAL_ENV_CONFIGS.each do |config_name|
+            next if config_name == :config_file
+
             describe "ENV #{config_name}" do
               let(:env_name) { "AWS_ACTIVE_JOB_SQS_#{config_name.to_s.upcase}" }
 
@@ -91,7 +93,7 @@ module Aws
               before(:each) do
                 ENV[env_name] = 'env_value'
 
-                file_options = {queues: {default: {}}}
+                file_options = { queues: { default: {} } }
                 file_options[:queues][:default][config_name] = 'file_value'
                 allow_any_instance_of(Configuration)
                   .to receive(:file_options).and_return(file_options)
@@ -102,11 +104,12 @@ module Aws
               end
 
               it 'uses values from ENV over default and file' do
+                puts cfg.to_h
                 expect(cfg.send(:"#{config_name}_for", :default)).to eq('env_value')
               end
 
               it 'uses runtime configured values over ENV' do
-                options = {queues: {default: {}}}
+                options = { queues: { default: {} } }
                 options[:queues][:default][config_name] = 'runtime_value'
                 cfg = Configuration.new(options)
                 expect(cfg.send(:"#{config_name}_for", :default)).to eq('runtime_value')
@@ -130,14 +133,14 @@ module Aws
         end
 
         Configuration::QUEUE_ENV_CONFIGS.each do |config_name|
-          describe "##{config_name}" do
+          describe "##{config_name}_for" do
             let(:cfg) do
               queues = {
                 default: {},
                 override: {}
               }
               queues[:override][config_name] = 'queue_value'
-              options = {queues: queues}
+              options = { queues: queues, config_file: 'nonexistant' }
               options[config_name] = 'global_value'
               Aws::ActiveJob::SQS::Configuration.new(**options)
             end

@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - version-1.0
 
 env:
   ruby_version: 3.3

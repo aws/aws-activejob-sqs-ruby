@@ -29,6 +29,10 @@ module Aws
       def self.fifo?(queue_url)
         queue_url.end_with?('.fifo')
       end
+
+      def self.on_worker_stop(...)
+        Executor.on_stop(...)
+      end
     end
   end
 end

@@ -95,7 +95,12 @@ end
 SQS Active Job loads global and queue specific values from your
 environment. Global keys take the form of:
 `AWS_ACTIVE_JOB_SQS_<KEY_NAME>` and queue specific keys take the
-form of: `AWS_ACTIVE_JOB_SQS_<QUEUE_NAME>_<KEY_NAME>`. Example:
+form of: `AWS_ACTIVE_JOB_SQS_<QUEUE_NAME>_<KEY_NAME>`.
+<QUEUE_NAME> is case-insensitive and is always down cased. Configuring
+non-snake case queues (containing upper case) through ENV is
+not supported.
+
+Example:
 
 ```shell
 export AWS_ACTIVE_JOB_SQS_MAX_MESSAGES = 5
