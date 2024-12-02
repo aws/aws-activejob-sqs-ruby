@@ -17,9 +17,10 @@ module Aws
 
         def initialize(options = {})
           @executor = Concurrent::ThreadPoolExecutor.new(DEFAULTS.merge(options))
-          @retry_standard_errors = options[:retry_standard_errors]
+          @error_handler = options[:error_handler]
           @logger = options[:logger] || ActiveSupport::Logger.new($stdout)
           @task_complete = Concurrent::Event.new
+          @errors = Concurrent::Array.new
         end
 
         def execute(message)

@@ -48,7 +48,7 @@ module Aws
             max_threads: config.threads,
             logger: @logger,
             max_queue: config.backpressure,
-            retry_standard_errors: config.retry_standard_errors
+            error_handler: config.poller_error_handler
           )
 
           poll
@@ -134,10 +134,6 @@ module Aws
             opts.on('-s', '--shutdown_timeout INTEGER', Integer,
                     'The amount of time to wait for a clean shutdown.  Jobs that are unable to complete in this time will not be deleted from the SQS queue and will be retryable after the visibility timeout.') do |a|
               out[:shutdown_timeout] = a
-            end
-            opts.on('--[no-]retry_standard_errors [FLAG]', TrueClass,
-                    'When set, retry all StandardErrors (leaving failed messages on the SQS Queue). These retries are ON TOP of standard Rails ActiveJob retries set by retry_on in the ActiveJob.') do |a|
-              out[:retry_standard_errors] = a.nil? ? true : a
             end
           end
 
