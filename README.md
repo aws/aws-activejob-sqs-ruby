@@ -196,8 +196,17 @@ for documentation.
 
 To start processing jobs, you need to start a separate process
 (in additional to your Rails app) with `bin/aws_active_job_sqs`
-(an executable script provided with this gem).  You need to specify the queue to
-process jobs from:
+(an executable script provided with this gem). You can poll for one or multiple
+queues using the `--queue` argument(s). You can  specify multiple queues 
+in the arguments by passing`--queue` multiple times 
+(eg `--queue queue_1 --queue queue_2`) or for all configured queues by 
+providing no queue arguments. When multiple queues are specified, 1 thread 
+per queue is started to run the poller for that queue. All queues share a 
+single, common thread pool for executing jobs.
+
+It is generally recommended to start one polling process per queue instead of
+running a single poller for all queues as this generally allows you to better
+manage the resources used.
 
 ```sh
 RAILS_ENV=development bundle exec aws_active_job_sqs --queue default

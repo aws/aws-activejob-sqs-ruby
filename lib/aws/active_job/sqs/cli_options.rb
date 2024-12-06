@@ -15,13 +15,13 @@ module Aws
         :visibility_timeout,
         :shutdown_timeout,
         :require,
-        :queue,
+        :queues,
         keyword_init: true
       ) do
         def self.parse(argv)
-          out = new(boot_rails: true)
+          out = new(boot_rails: true, queues: [])
           parser = ::OptionParser.new do |opts|
-            queue_option(opts, out)
+            queues_option(opts, out)
             threads_option(opts, out)
             backpressure_option(opts, out)
             max_messages_option(opts, out)
@@ -90,8 +90,10 @@ module Aws
           end
         end
 
-        def self.queue_option(opts, out)
-          opts.on('-q', '--queue STRING', '[Required] Queue to poll') { |a| out[:queue] = a }
+        def self.queues_option(opts, out)
+          opts.on('-q', '--queue STRING', 'Queue(s) to poll. You may specify this argument multiple times to poll multiple queues.  If not specified, will start pollers for all queues defined.') do |a|
+            out[:queues] << a.to_sym
+          end
         end
       end
     end

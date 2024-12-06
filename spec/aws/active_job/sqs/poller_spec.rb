@@ -10,10 +10,12 @@ module Aws
         let(:msg) { double('SQSMessage', receipt_handle: '1234') }
         let(:logger) { double(info: nil) }
         let(:sqs_client) { Aws::SQS::Client.new(stub_responses: true) }
+        let(:executor) { double }
 
         before do
           allow(ActiveSupport::Logger).to receive(:new).and_return(logger)
           allow(Aws::ActiveJob::SQS.config).to receive(:client).and_return(sqs_client)
+          allow(Executor).to receive(:new).and_return(executor)
         end
 
         describe '#initialize' do
@@ -28,7 +30,7 @@ module Aws
         describe '#run' do
           let(:poller) do
             Poller.new(
-              queue: :default,
+              queues: [:default],
               visibility_timeout: 360,
               shutdown_timeout: 42
             )
@@ -48,13 +50,14 @@ module Aws
             poller.run
           end
 
-          it 'polls the configured queue' do
+          it 'polls the single configured queue in the main thread' do
             expect(Aws::SQS::QueuePoller).to receive(:new).with(
               'https://queue-url',
-              { client: instance_of(Aws::SQS::Client) }
+              { client: sqs_client }
             ).and_return(queue_poller)
 
             expect(queue_poller).to receive(:poll)
+            expect(Thread).not_to receive(:new)
             poller.run
           end
 
@@ -110,6 +113,62 @@ module Aws
             expect(poller).to receive(:exit) # no-op the exit
 
             poller.run
+          end
+
+          context 'queue without configuration' do
+            let(:poller) { Poller.new(queues: [:not_defined]) }
+
+            it 'raises an error' do
+              expect { poller.run }.to raise_error(ArgumentError)
+            end
+          end
+
+          context 'queue without url configuration' do
+            let(:poller) { Poller.new(queues: [:no_url]) }
+
+            it 'raises an error' do
+              Aws::ActiveJob::SQS.configure do |config|
+                config.queues[:no_url] = {}
+              end
+              expect { poller.run }.to raise_error(ArgumentError)
+            end
+          end
+
+          context 'multiple queues' do
+            let(:poller) do
+              Poller.new(
+                queues: %i[default other],
+                visibility_timeout: 360,
+                shutdown_timeout: 42
+              )
+            end
+
+            before(:each) do
+              Aws::ActiveJob::SQS.configure do |config|
+                config.queues[:other] = { url: 'https://other-queue-url' }
+              end
+            end
+
+            it 'starts a thread and polls for each queue' do
+              thread = double(join: nil)
+              allow(Thread).to receive(:new).and_yield.and_return(thread)
+
+              queue_poller_default = double
+              expect(Aws::SQS::QueuePoller).to receive(:new).with(
+                'https://queue-url',
+                { client: sqs_client }
+              ).and_return(queue_poller_default)
+              expect(queue_poller_default).to receive(:poll)
+
+              queue_poller_other = double
+              expect(Aws::SQS::QueuePoller).to receive(:new).with(
+                'https://other-queue-url',
+                { client: sqs_client }
+              ).and_return(queue_poller_other)
+              expect(queue_poller_other).to receive(:poll)
+
+              poller.run
+            end
           end
         end
       end

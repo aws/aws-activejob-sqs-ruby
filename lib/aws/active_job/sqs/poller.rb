@@ -12,6 +12,7 @@ module Aws
         class Interrupt < StandardError; end
 
         def initialize(options = {})
+          @queues = options.delete(:queues)
           @options = options
         end
 
@@ -21,8 +22,6 @@ module Aws
               cfg.send(:"#{key}=", value) if cfg.respond_to?(:"#{key}=")
             end
           end
-
-          validate_config
 
           config = Aws::ActiveJob::SQS.config
 
@@ -54,30 +53,77 @@ module Aws
 
         def poll
           config = Aws::ActiveJob::SQS.config
-          queue = @options[:queue]
+          if @queues && !@queues.empty?
+            if @queues.size == 1
+              # single queue, use main thread
+              poll_foreground(@queues.first)
+            else
+              poll_background(@queues)
+            end
+          else
+            # poll on all configured queues
+            @logger.info("No queues specified - polling on all configured queues: #{config.queues.keys}")
+            poll_background(config.queues.keys)
+          end
+        end
+
+        def poll_foreground(queue)
+          config = Aws::ActiveJob::SQS.config
+          validate_config(queue)
           queue_url = config.url_for(queue)
-          @poller = Aws::SQS::QueuePoller.new(queue_url, client: config.client)
+
+          poller_options = poller_options(queue)
+          @logger.info "Foreground Polling on: #{queue} => #{queue_url} with options=#{poller_options}"
+
+          _poll(poller_options, queue_url)
+        end
+
+        def poll_background(queues)
+          config = Aws::ActiveJob::SQS.config
+          queues.each { |q| validate_config(q) }
+          poller_threads = queues.map do |queue|
+            Thread.new do
+              queue_url = config.url_for(queue)
+
+              poller_options = poller_options(queue)
+              @logger.info "Background Polling on: #{queue} => #{queue_url} with options=#{poller_options}"
+
+              _poll(poller_options, queue_url)
+            end
+          end
+          poller_threads.each(&:join)
+        end
+
+        def validate_config(queue)
+          return if Aws::ActiveJob::SQS.config.queues[queue]&.fetch(:url, nil)
+
+          raise ArgumentError, "No URL configured for queue #{queue}"
+        end
+
+        def poller_options(queue)
+          config = Aws::ActiveJob::SQS.config
+          queue_url = config.url_for(queue)
           poller_options = {
             skip_delete: true,
             max_number_of_messages: config.max_messages_for(queue),
             visibility_timeout: config.visibility_timeout_for(queue)
           }
+
           # Limit max_number_of_messages for FIFO queues to 1
           # this ensures jobs with the same message_group_id are processed
           # in order
           # Jobs with different message_group_id will be processed in
           # parallel and may be out of order.
           poller_options[:max_number_of_messages] = 1 if Aws::ActiveJob::SQS.fifo?(queue_url)
-
-          single_message = poller_options[:max_number_of_messages] == 1
-
-          @logger.info "Polling on: #{queue} => #{queue_url} with options=#{poller_options}"
-
-          _poll(config.client, poller_options, queue_url, single_message)
+          poller_options
         end
 
-        def _poll(client, poller_options, queue_url, single_message)
-          @poller.poll(poller_options) do |msgs|
+        def _poll(poller_options, queue_url)
+          config = Aws::ActiveJob::SQS.config
+          client = config.client
+          poller = Aws::SQS::QueuePoller.new(queue_url, client: client)
+          single_message = poller_options[:max_number_of_messages] == 1
+          poller.poll(poller_options) do |msgs|
             msgs = [msgs] if single_message
             @logger.info "Processing batch of #{msgs.length} messages"
             msgs.each do |msg|
@@ -89,10 +135,6 @@ module Aws
                                 ))
             end
           end
-        end
-
-        def validate_config
-          raise ArgumentError, 'You must specify the name of the queue to process jobs from' unless @options[:queue]
         end
       end
     end

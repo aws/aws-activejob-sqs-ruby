@@ -33,6 +33,7 @@ module Aws
           @executor = Concurrent::ThreadPoolExecutor.new(DEFAULTS.merge(options))
           @logger = options[:logger] || ActiveSupport::Logger.new($stdout)
           @task_complete = Concurrent::Event.new
+          @post_mutex = Mutex.new
 
           @error_handler = options[:error_handler]
           @error_queue = Thread::Queue.new
@@ -43,12 +44,9 @@ module Aws
         end
 
         def execute(message)
-          post_task(message)
-        rescue Concurrent::RejectedExecutionError
-          # no capacity, wait for a task to complete
-          @task_complete.reset
-          @task_complete.wait
-          retry
+          @post_mutex.synchronize do
+            _execute(message)
+          end
         end
 
         def shutdown(timeout = nil)
@@ -71,6 +69,15 @@ module Aws
         end
 
         private
+
+        def _execute(message)
+          post_task(message)
+        rescue Concurrent::RejectedExecutionError
+          # no capacity, wait for a task to complete
+          @task_complete.reset
+          @task_complete.wait
+          retry
+        end
 
         def post_task(message)
           @executor.post(message) do |message|
