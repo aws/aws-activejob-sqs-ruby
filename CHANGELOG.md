@@ -1,6 +1,8 @@
 Unreleased Changes
 ------------------
 
+* Issue - Remove `aws_sqs_active_job` executable. 
+
 1.0.1 (2024-12-23)
 ------------------
 
