@@ -1,8 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-Kernel.warn "The `aws_sqs_active_job` executable is renamed to `aws_active_job_sqs` in 1.0.0"
-
 require_relative '../lib/aws/active_job/sqs/poller'
 
 require 'rails'
