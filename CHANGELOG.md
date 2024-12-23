@@ -1,4 +1,4 @@
-Unreleased Changes
+1.0.1 (2024-12-23)
 ------------------
 
 * Issue - Add deprecated `aws_sqs_active_job` executable to aid in migration.
