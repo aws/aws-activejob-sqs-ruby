@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.homepage     = 'https://github.com/aws/aws-activejob-sqs-ruby'
   spec.license      = 'Apache-2.0'
   spec.files        = Dir['LICENSE', 'CHANGELOG.md', 'VERSION', 'lib/**/*']
-  spec.executables  = %w[aws_active_job_sqs aws_sqs_active_job]
+  spec.executables  = ['aws_active_job_sqs']
 
   # Require this version for user_agent_framework configs
   spec.add_dependency('aws-sdk-sqs', '~> 1', '>= 1.56.0')
