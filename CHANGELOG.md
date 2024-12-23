@@ -1,6 +1,9 @@
 Unreleased Changes
 ------------------
 
+* Issue - Add deprecated `aws_sqs_active_job` executable to aid in migration.
+* Issue - Support legacy `queue: 'url'` config in file to aid in migration.
+
 1.0.0 (2024-12-13)
 ------------------
 

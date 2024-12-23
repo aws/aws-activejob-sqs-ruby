@@ -100,6 +100,7 @@ module Aws
         end
 
         def validate_config(queue)
+          puts Aws::ActiveJob::SQS.config.queues
           return if Aws::ActiveJob::SQS.config.queues[queue]&.fetch(:url, nil)
 
           raise ArgumentError, "No URL configured for queue #{queue}"

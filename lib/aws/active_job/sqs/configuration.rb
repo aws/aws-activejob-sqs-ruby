@@ -275,7 +275,11 @@ module Aws
         # Load options from YAML file
         def load_from_file(file_path)
           opts = load_yaml(file_path) || {}
-          opts.deep_symbolize_keys
+          opts = opts.deep_symbolize_keys
+          opts[:queues]&.each_key do |queue|
+            opts[:queues][queue] = { url: opts[:queues][queue] } if opts[:queues][queue].is_a?(String)
+          end
+          opts
         end
 
         def load_yaml(file_path)
