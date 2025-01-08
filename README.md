@@ -49,7 +49,7 @@ When using the Async adapter, you may want to configure a
 
 ```ruby
 # config/environments/production.rb
-config.active_job.queue_adapter = :async_sqs
+config.active_job.queue_adapter = :sqs_async
 ```
 
 You can also set the adapter for a single job:
