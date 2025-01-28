@@ -245,9 +245,40 @@ bundle exec aws_active_job_sqs --queue default --no-rails --require my_jobs.rb
 ### Serverless workers: Processing jobs using AWS Lambda
 
 Rather than managing the worker processes yourself, you can use Lambda with an
-SQS Trigger. With
+SQS Trigger.  There are two main ways to process jobs with lambda:
+
+1. [Running without Rails](#processing-jobs-on-lambda-without-rails) using a ZIP, SAM CLI or CDK
+2. [Running with Rails](#processing-jobs-on-lambda-with-rails-container-image) using a Container Image.
+
+#### Processing Jobs on Lambda Without Rails
+In general, if you can separate out your job logic and dependencies from your
+main application its recommended that you run a light weight Lambda function
+to process jobs. A basic job can be executed using around 80 Mb of memory with
+a lower cold start time than a Rails container.
+
+There are a number of ways to do this, including 
+[deploying with a .zip file](https://docs.aws.amazon.com/lambda/latest/dg/ruby-package.html),
+creating an application with the 
+[AWS Serverless Application Model (SAM)](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html),
+, or defining and deploying the function in 
+[AWS CDK](https://docs.aws.amazon.com/lambda/latest/dg/lambda-cdk-tutorial.html).
+
+The below are general instructions for manually creating and using a .zip
+to handle basic jobs in a lambda function.
+
+1. Create a Gemfile. It must include `aws-activejob-sqs` and your other dependencies.
+2. Use a local folder to install dependencies: `bundle config set --local path 'vendor/bundle' && bundle install`.
+3. Create an `app.rb` file that requires `aws-activejob-sqs` and your local job files (see example below) with a `handle` method that calls `Aws::ActiveJob::SQS::LambdaHandler.job_handler(...)`.
+4. Create a zip that includes your ruby files and the vendor folder: `zip -r test_activejob_lambda.zip *.rb vendor`
+5. Create a lambda function using the latest Ruby runtime and upload the zip. 
+6. Specify the handler.  Edit the runtime settings and change the Handler to `app.handle` (file name.function).
+7. Add SQS permissions to the lambda's execution role.
+8. Add an SQS Trigger with your job queue(s).
+
+#### Processing jobs on Lambda with Rails (Container Image)
+With
 [Lambda Container Image Support](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/)
-and the lambda handler provided with this gem, it's easy to use lambda to run
+and the lambda handler provided with this gem, you can use lambda to run
 ActiveJobs for your dockerized rails app (see below for some tips). 
 
 All you need to do is:
