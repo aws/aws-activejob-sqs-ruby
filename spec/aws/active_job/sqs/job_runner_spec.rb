@@ -52,11 +52,6 @@ module Aws
           allow(Aws::ActiveJob::SQS.config).to receive(:queues).and_return(queue_config).once
         end
 
-        it 'parses the job data' do
-          job_runner = JobRunner.new(msg)
-          expect(job_runner.instance_variable_get(:@job_data)).to eq job_data
-        end
-
         describe '.queue_event_handlers' do
           context 'has no event queues' do
             it 'returns empty hash' do
@@ -71,6 +66,34 @@ module Aws
                 'http://example.sqs/event_queue' => 'EventJob'
               )
             end
+          end
+        end
+
+        describe '#initialize' do
+          describe 'job_data' do
+            it 'prepares job_data' do
+              expect_any_instance_of(described_class).to receive(:prepare_job_data).with(msg).and_call_original
+              subject
+            end
+
+            it 'prepares active job data' do
+              expect(subject.instance_variable_get(:@job_data)).to eq job_data
+            end
+
+            it 'prepares event job data' do
+              instance = described_class.new(event_msg)
+              expected = described_class.new(event_msg).send(:format_event_data, event_msg)
+
+              expect(instance.instance_variable_get(:@job_data)).to eq(expected)
+            end
+          end
+
+          it 'sets the class_name' do
+            expect(subject.class_name).to eq TestJob
+          end
+
+          it 'sets the id' do
+            expect(subject.id).to eq job_data['job_id']
           end
         end
 
@@ -118,6 +141,30 @@ module Aws
 
           it 'returns false if the message does not have active job attributes' do
             expect(subject.send(:is_active_job_message?, event_msg)).to be false
+          end
+        end
+
+        describe '#job_class_from_config' do
+          it 'returns the job class from the queue config' do
+            event_url   = queue_config.dig(:event_queue, :url)
+            event_class = queue_config.dig(:event_queue, :job_class)
+
+            expect(subject.send(:job_class_from_config, event_url)).to eq(event_class)
+          end
+
+          context 'missing job class' do
+            it 'raises error' do
+              queue_url = queue_config.dig(:default_queue, :url)
+              expect {
+                subject.send(:job_class_from_config, queue_url)
+              }.to raise_error(ArgumentError, "No handler configured for queue #{queue_url}")
+            end
+          end
+        end
+
+        describe '#queue_event_handlers' do
+          it 'returns class.queue_event_handlers' do
+            expect(subject.send(:queue_event_handlers)).to eq(described_class.queue_event_handlers)
           end
         end
       end
