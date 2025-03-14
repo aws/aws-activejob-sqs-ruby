@@ -22,18 +22,19 @@ module Aws
             }
           }
         end
-        # message is a reserved minitest name
-        let(:msg) do
+        let(:msg) do # message is a reserved minitest name
           double( data: double(body: body),
                   message_id: message_id,
                   queue_url: queue_config.dig(:default_queue, :url),
-                  message_attributes: active_job_attributes)
+                  message_attributes: active_job_attributes,
+                  receipt_handle: SecureRandom.uuid)
         end
         let(:event_msg) do
           double( data: double(message_id: SecureRandom.uuid, body: event_body, message_attributes: {}),
                   queue_url: queue_config.dig(:event_queue, :url),
                   message_id: message_id,
-                  message_attributes: {})
+                  message_attributes: {},
+                  receipt_handle: SecureRandom.uuid)
         end
         let(:queue_config) do
           {
@@ -126,10 +127,15 @@ module Aws
           let(:event_job) { described_class.new(event_msg) }
 
           it 'returns a hash with job_class, job_id, and arguments' do
+            message = event_msg.data.as_json.merge(
+              'receipt_handle' => event_msg.receipt_handle,
+              'queue_url' => event_msg.queue_url
+            )
+
             expect(event_job.send(:format_event_data, event_msg)).to eq(
               'job_class' => 'EventJob',
               'job_id' => event_msg.message_id,
-              'arguments' => [event_msg.data.to_json]
+              'arguments' => [message]
             )
           end
         end

@@ -44,7 +44,12 @@ module Aws
           {
             'job_class' => job_class_from_config(message.queue_url),
             'job_id' => message.message_id,
-            'arguments' => [message.data.to_json]
+            'arguments' => [
+              message.data.as_json.merge(
+                'receipt_handle' => message.receipt_handle,
+                'queue_url' => message.queue_url
+              )
+            ]
           }
         end
 
