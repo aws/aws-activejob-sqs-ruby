@@ -242,6 +242,69 @@ additional file that includes required Job/application definitions with
 bundle exec aws_active_job_sqs --queue default --no-rails --require my_jobs.rb
 ```
 
+### Event Processing: Processing event jobs
+
+This gem allows you to also process events enqueued outside of ActiveJob.
+For example processing jobs from a SQS queue subscribed to a SNS topic, IOT event, Eventbridge event, etc.
+
+```yaml
+# config/aws_active_job_sqs.yml
+queues:
+  default: 
+    url: 'https://my-queue-url.amazon.aws'
+    job_class: 'MyEventJob' # Job processor class
+```
+
+When defined as an event job, you will receive a message object with attributes required to process a raw sqs message.
+
+```ruby
+class MyEventJob < ApplicationJob
+  def perform(message)
+    sqs_message_id      = message['message_id']
+    receipt_handle      = message['receipt_handle']
+    attributes          = message['attributes']
+    message_attributes  = message['message_attributes']
+    queue_url           = message['queue_url']
+    message_body        = message['body']
+  end
+end
+```
+
+#### Event Processing: Manual handle sqs messages.
+
+In the event you need more time to process a job, or you would like to delete the job manually, you have all necessary data.
+
+```ruby
+class MyEventJob < ApplicationJob
+  MAX_RETRIES = 10
+
+  def perform(message)
+    @receipt_handle = message['receipt_handle']
+    @queue_url      = message['queue_url']
+
+    sqs_message.change_visibility(visibility_timeout: 500)
+    process_message(message['body'])
+  rescue => e
+    received_count = message.dig('attributes', 'ApproximateReceiveCount').to_i
+    return sqs_message.delete if received_count >= MAX_RETRIES
+
+    raise
+  end
+
+  def process_message(message_body)
+   # Do work...
+  end
+
+  def sqs_message
+    @sqs_message ||= Aws::SQS::Message.new(
+      queue_url: @queue_url,
+      receipt_handle: @receipt_handle,
+      client: Aws::ActiveJob::SQS.config.client
+    )
+  end
+end
+```
+
 ### Serverless workers: Processing jobs using AWS Lambda
 
 Rather than managing the worker processes yourself, you can use Lambda with an
