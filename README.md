@@ -270,7 +270,7 @@ class MyEventJob < ApplicationJob
 end
 ```
 
-#### Event Processing: Process long running jobs
+#### Event Processing: Manual handle sqs messages.
 
 In the event you need more time to process a job, or you would like to delete the job manually, you have all necessary data.
 
@@ -282,16 +282,13 @@ class MyEventJob < ApplicationJob
     @receipt_handle = message['receipt_handle']
     @queue_url      = message['queue_url']
 
-    sqs_message_id      = message['message_id']
-    attributes          = message['attributes']
-    message_attributes  = message['message_attributes']
-    message_body        = message['body']
-
     sqs_message.change_visibility(visibility_timeout: 500)
-    process_message(message_body)
+    process_message(message['body'])
   rescue => e
-    received_count = attributes['ApproximateReceiveCount'].to_i
-    sqs_message.delete if received_count >= MAX_RETRIES
+    received_count = message.dig('attributes', 'ApproximateReceiveCount').to_i
+    return sqs_message.delete if received_count >= MAX_RETRIES
+
+    raise
   end
 
   def process_message(message_body)
