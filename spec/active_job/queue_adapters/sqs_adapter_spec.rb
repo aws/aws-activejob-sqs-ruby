@@ -199,11 +199,13 @@ module ActiveJob
               queue_url: 'https://queue-url',
               entries: [
                 {
+                  delay_seconds: instance_of(Integer),
                   id: instance_of(String),
                   message_body: instance_of(String),
                   message_attributes: instance_of(Hash)
                 },
                 {
+                  delay_seconds: instance_of(Integer),
                   id: instance_of(String),
                   message_body: instance_of(String),
                   message_attributes: instance_of(Hash)
