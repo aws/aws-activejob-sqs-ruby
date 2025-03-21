@@ -8,7 +8,7 @@ module ActiveJob
       class Params
         class << self
           def assured_delay_seconds(timestamp)
-            delay = (timestamp - Time.now.to_f).floor
+            delay = (timestamp.to_f - Time.now.to_f).floor
             delay = 0 if delay.negative?
             raise ArgumentError, 'Unable to queue a job with a delay great than 15 minutes' if delay > 15.minutes
 

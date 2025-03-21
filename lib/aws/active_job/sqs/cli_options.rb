@@ -47,7 +47,7 @@ module Aws
         def self.boot_rails_option(opts, out)
           doc = 'When set boots rails before running the poller.'
           opts.on('--[no-]rails [FLAG]', TrueClass, doc) do |a|
-            out[:boot_rails] = a.nil? ? true : a
+            out[:boot_rails] = a.nil? || a
           end
         end
 
