@@ -1,7 +1,8 @@
 Unreleased Changes
 ------------------
 
-* Issue - Remove `aws_sqs_active_job` executable. 
+* Issue - Remove `aws_sqs_active_job` executable.
+* Issue - Handle `Time` objects correctly when using `ActiveJob.perform_all_later`.
 
 1.0.1 (2024-12-23)
 ------------------

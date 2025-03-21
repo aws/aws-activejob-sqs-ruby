@@ -21,7 +21,7 @@ module ActiveJob
         sleep(0.2)
       end
 
-      describe 'fifo queues' do
+      context 'fifo queues' do
         before do
           allow(Aws::ActiveJob::SQS.config).to receive(:url_for).and_return('https://queue-url.fifo')
         end
@@ -41,12 +41,12 @@ module ActiveJob
           sleep(0.2)
         end
 
-        describe 'when job has excluded deduplication keys defined' do
+        context 'when job has excluded deduplication keys defined' do
           let(:ex_dedup_keys) { %w[job_class queue_name] }
           let(:ex_dudup_keys_with_job_id) { ex_dedup_keys << 'job_id' }
           let(:hashed_body) { 'hashed_body' }
 
-          describe 'through #deduplicate_without' do
+          context 'through #deduplicate_without' do
             before do
               TestJobWithDedupKeys.deduplicate_without(*ex_dedup_keys)
             end
@@ -72,7 +72,7 @@ module ActiveJob
             end
           end
 
-          describe 'through Aws::ActiveJob::SQS config' do
+          context 'through Aws::ActiveJob::SQS config' do
             before do
               Aws::ActiveJob::SQS.configure do |config|
                 config.excluded_deduplication_keys = ex_dedup_keys
@@ -101,7 +101,7 @@ module ActiveJob
           end
         end
 
-        describe 'when job has #message_group_id defined' do
+        context 'when job has #message_group_id defined' do
           it 'adds message_deduplication_id and default message_group_id if job does not return a value' do
             expect(client).to receive(:send_message).with(
               {
@@ -141,7 +141,7 @@ module ActiveJob
         end
       end
 
-      describe 'with queue delay' do
+      context 'with queue delay' do
         it 'enqueues jobs with proper delay' do
           t1 = Time.now
           allow(Time).to receive(:now).and_return t1
@@ -186,35 +186,37 @@ module ActiveJob
         end
       end
 
-      if Gem::Version.new(Rails::VERSION::STRING) >= Gem::Version.new('7.1.0')
-        describe 'with multiple jobs' do
-          before do
-            response = double('Response')
-            allow(response).to receive(:successful).and_return([1, 2])
-            allow(client).to receive(:send_message_batch).and_return(response)
-          end
+      context 'with multiple jobs' do
+        before do
+          response = double('Response')
+          allow(response).to receive(:successful).and_return([1, 2])
+          allow(client).to receive(:send_message_batch).and_return(response)
+        end
 
-          it do
-            expect(client).to receive(:send_message_batch).with(
-              {
-                queue_url: 'https://queue-url',
-                entries: [
-                  {
-                    id: instance_of(String),
-                    message_body: instance_of(String),
-                    message_attributes: instance_of(Hash)
-                  },
-                  {
-                    id: instance_of(String),
-                    message_body: instance_of(String),
-                    message_attributes: instance_of(Hash)
-                  }
-                ]
-              }
-            ).once
+        it do
+          expect(client).to receive(:send_message_batch).with(
+            {
+              queue_url: 'https://queue-url',
+              entries: [
+                {
+                  id: instance_of(String),
+                  message_body: instance_of(String),
+                  message_attributes: instance_of(Hash)
+                },
+                {
+                  id: instance_of(String),
+                  message_body: instance_of(String),
+                  message_attributes: instance_of(Hash)
+                }
+              ]
+            }
+          ).once
 
-            ActiveJob.perform_all_later(TestJob.new('test'), TestJob.new('test'))
-          end
+          jobs = [
+            TestJob.new('test').set(wait: 1.minute),
+            TestJob.new('test').set(wait: 1.minute)
+          ]
+          ActiveJob.perform_all_later(jobs)
         end
       end
     end
