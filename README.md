@@ -272,7 +272,7 @@ class MyEventJob < ApplicationJob
 end
 ```
 
-#### Event Processing: Manual handle sqs messages.
+#### Event Processing: Manually handle sqs messages.
 
 In the event you need more time to process a job, you have all necessary data to change the visibility timeout.
 
@@ -301,6 +301,12 @@ class MyEventJob < ApplicationJob
   end
 end
 ```
+
+#### Event Processing: Retries
+
+Message event failures are treated the same as ActiveJob failures. By default, a StandardError whill leave the message on the queue and initiate shutdown for the poller and it will attempt to finish executing any in progress jobs. 
+
+It is reccomended to configure [retry_on](https://api.rubyonrails.org/classes/ActiveJob/Exceptions/ClassMethods.html#method-i-retry_on) for handling failures. For more information, please read the [Retry Behavior and Handling Errors](#retry-behavior-and-handling-errors) section.
 
 ### Serverless workers: Processing jobs using AWS Lambda
 
