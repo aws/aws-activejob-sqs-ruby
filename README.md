@@ -252,10 +252,12 @@ For example processing jobs from a SQS queue subscribed to a SNS topic, IOT even
 queues:
   default: 
     url: 'https://my-queue-url.amazon.aws'
+  event_job: 
+    url: 'https://my-event-queue-url.amazon.aws'
     job_class: 'MyEventJob' # Job processor class
 ```
 
-When defined as an event job, you will receive a message object with attributes required to process a raw sqs message.
+If the SQS message is not an Active Job (i.e., not enqueued by ActiveJob with an 'aws_sqs_active_job_class' message attribute), it will be treated as an event, and the specified job processor class will be invoked with the raw SQS message for processing. 
 
 ```ruby
 class MyEventJob < ApplicationJob
@@ -284,11 +286,6 @@ class MyEventJob < ApplicationJob
 
     sqs_message.change_visibility(visibility_timeout: 500)
     process_message(message['body'])
-  rescue => e
-    received_count = message.dig('attributes', 'ApproximateReceiveCount').to_i
-    return sqs_message.delete if received_count >= MAX_RETRIES
-
-    raise
   end
 
   def process_message(message_body)
