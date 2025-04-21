@@ -274,7 +274,7 @@ end
 
 #### Event Processing: Manual handle sqs messages.
 
-In the event you need more time to process a job, or you would like to delete the job manually, you have all necessary data.
+In the event you need more time to process a job, you have all necessary data to change the visibility timeout.
 
 ```ruby
 class MyEventJob < ApplicationJob
