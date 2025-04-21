@@ -254,10 +254,10 @@ queues:
     url: 'https://my-queue-url.amazon.aws'
   event_job: 
     url: 'https://my-event-queue-url.amazon.aws'
-    job_class: 'MyEventJob' # Job processor class
+    event_message_class: 'MyEventJob' # Job processor class
 ```
 
-If the SQS message is not an Active Job (i.e., not enqueued by ActiveJob with an 'aws_sqs_active_job_class' message attribute), it will be treated as an event, and the specified job processor class will be invoked with the raw SQS message for processing. 
+If the SQS message is not an Active Job (i.e., not enqueued by ActiveJob with an 'aws_sqs_active_job_class' message attribute), it will be treated as an event, and the specified job processor class (event_message_class) will be invoked with the raw SQS message for processing.
 
 ```ruby
 class MyEventJob < ApplicationJob

@@ -43,7 +43,7 @@ module Aws
             },
             event_queue: {
               url: 'http://example.sqs/event_queue',
-              job_class: 'EventJob'
+              event_message_class: 'EventJob'
             }
           }
         end
@@ -71,17 +71,17 @@ module Aws
             context 'when configued with ENV' do
               let(:cfg) do
                 queues = queue_config.dup
-                queues[:event_queue].delete(:job_class)
+                queues[:event_queue].delete(:event_message_class)
                 Configuration.new(queues: queues)
               end
 
               before do
-                ENV['AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_JOB_CLASS'] = 'ENVEventJob'
+                ENV['AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_EVENT_MESSAGE_CLASS'] = 'ENVEventJob'
                 allow(Aws::ActiveJob::SQS).to receive(:config).and_return(cfg)
               end
 
               after do
-                ENV.delete('AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_JOB_CLASS')
+                ENV.delete('AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_EVENT_MESSAGE_CLASS')
               end
 
               it 'returns a hash of queue urls to job classes' do
@@ -176,7 +176,7 @@ module Aws
         describe '#job_class_from_config' do
           it 'returns the job class from the queue config' do
             event_url   = queue_config.dig(:event_queue, :url)
-            event_class = queue_config.dig(:event_queue, :job_class)
+            event_class = queue_config.dig(:event_queue, :event_message_class)
 
             expect(subject.send(:job_class_from_config, event_url)).to eq(event_class)
           end

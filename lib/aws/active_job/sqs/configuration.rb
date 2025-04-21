@@ -76,7 +76,7 @@ module Aws
           max_messages
           visibility_timeout
           message_group_id
-          job_class
+          event_message_class
         ].freeze
 
         QUEUE_CONFIGS = QUEUE_ENV_CONFIGS + %i[excluded_deduplication_keys]

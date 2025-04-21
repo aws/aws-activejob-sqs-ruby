@@ -10,9 +10,9 @@ module Aws
         def self.queue_event_handlers
           @@queue_handlers ||= {}.tap do |handlers|
             Aws::ActiveJob::SQS.config.queues.values.each do |queue_config|
-              next unless queue_config[:job_class].present?
+              next unless queue_config[:event_message_class].present?
 
-              handlers[queue_config[:url]] = queue_config[:job_class]
+              handlers[queue_config[:url]] = queue_config[:event_message_class]
             end
           end
         end
