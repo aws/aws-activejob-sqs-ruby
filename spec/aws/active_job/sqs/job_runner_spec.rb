@@ -140,13 +140,13 @@ module Aws
           end
         end
 
-        describe '#is_active_job_message?' do
+        describe '#active_job_message?' do
           it 'returns true if the message has active job attributes' do
-            expect(subject.send(:is_active_job_message?, msg)).to be true
+            expect(subject.send(:active_job_message?, msg)).to be true
           end
 
           it 'returns false if the message does not have active job attributes' do
-            expect(subject.send(:is_active_job_message?, event_msg)).to be false
+            expect(subject.send(:active_job_message?, event_msg)).to be false
           end
         end
 

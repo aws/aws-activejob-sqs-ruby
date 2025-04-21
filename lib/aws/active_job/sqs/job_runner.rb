@@ -35,7 +35,7 @@ module Aws
         private
 
         def prepare_job_data(message)
-          return ActiveSupport::JSON.load(message.data.body) if is_active_job_message?(message)
+          return ActiveSupport::JSON.load(message.data.body) if active_job_message?(message)
 
           format_event_data(message)
         end
@@ -54,7 +54,7 @@ module Aws
         end
 
         # Active job messages will have message_attributes key 'aws_sqs_active_job_class'
-        def is_active_job_message?(message)
+        def active_job_message?(message)
           !message
             .message_attributes['aws_sqs_active_job_class']
             .nil?
