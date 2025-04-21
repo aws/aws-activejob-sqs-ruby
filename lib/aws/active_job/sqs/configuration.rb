@@ -31,7 +31,7 @@ module Aws
       # options.
       #
       # # Environment Variables
-      # The Configuration loads global and qubeue specific values from your
+      # The Configuration loads global and queue specific values from your
       # environment. Global keys take the form of:
       # `AWS_ACTIVE_JOB_SQS_<KEY_NAME>` and queue specific keys take the
       # form of: `AWS_ACTIVE_JOB_SQS_<QUEUE_NAME>_<KEY_NAME>`.

@@ -67,6 +67,29 @@ module Aws
                 'http://example.sqs/event_queue' => 'EventJob'
               )
             end
+
+            context 'when configued with ENV' do
+              let(:cfg) do
+                queues = queue_config.dup
+                queues[:event_queue].delete(:job_class)
+                Configuration.new(queues: queues)
+              end
+
+              before do
+                ENV['AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_JOB_CLASS'] = 'ENVEventJob'
+                allow(Aws::ActiveJob::SQS).to receive(:config).and_return(cfg)
+              end
+
+              after do
+                ENV.delete('AWS_ACTIVE_JOB_SQS_EVENT_QUEUE_JOB_CLASS')
+              end
+
+              it 'returns a hash of queue urls to job classes' do
+                expect(described_class.queue_event_handlers).to eq(
+                  'http://example.sqs/event_queue' => 'ENVEventJob'
+                )
+              end
+            end
           end
         end
 
