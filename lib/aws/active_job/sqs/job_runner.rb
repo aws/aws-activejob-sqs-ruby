@@ -9,6 +9,7 @@ module Aws
 
         def initialize(message)
           @job_data = ActiveSupport::JSON.load(message.data.body)
+          @job_data['provider_job_id'] = message.data.message_id
           @class_name = @job_data['job_class'].constantize
           @id = @job_data['job_id']
         end
