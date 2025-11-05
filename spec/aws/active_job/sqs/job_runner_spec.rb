@@ -18,9 +18,11 @@ module Aws
         end
 
         describe '#run' do
+          subject { instance.run }
+
           it 'calls Base.execute with the job data' do
             expect(::ActiveJob::Base).to receive(:execute).with(job_data).and_call_original
-            instance.run
+            subject
           end
         end
       end
