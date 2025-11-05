@@ -66,7 +66,8 @@ module ActiveJob
         params = Params.new(job, body)
         send_message_opts = send_message_opts.merge(params.entry)
         send_message_opts[:queue_url] = params.queue_url
-        Aws::ActiveJob::SQS.config.client.send_message(send_message_opts)
+        response = Aws::ActiveJob::SQS.config.client.send_message(send_message_opts)
+        job.provider_job_id = response.message_id
       end
     end
   end
