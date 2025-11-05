@@ -9,7 +9,9 @@ module Aws
         let(:message_id) { '12345' }
         let(:job_data) { job_serialized.merge('provider_job_id' => message_id) }
         let(:msg) do
-          Aws::SQS::Message.new(receipt_handle: 'receipt_handle', queue_url: 'queue_url', data: { body: body, message_id: message_id })
+          Aws::SQS::Message.new(receipt_handle: 'receipt_handle',
+                                queue_url: 'queue_url',
+                                data: { body: body, message_id: message_id })
         end
         let(:instance) { described_class.new(msg) }
 
