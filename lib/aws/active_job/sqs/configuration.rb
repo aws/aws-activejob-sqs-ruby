@@ -81,7 +81,7 @@ module Aws
         QUEUE_CONFIGS = QUEUE_ENV_CONFIGS + %i[excluded_deduplication_keys]
 
         QUEUE_KEY_REGEX =
-          /AWS_ACTIVE_JOB_SQS_([\w]+)_(#{QUEUE_ENV_CONFIGS.map(&:upcase).join('|')})/.freeze
+          /AWS_ACTIVE_JOB_SQS_(\w+)_(#{QUEUE_ENV_CONFIGS.map(&:upcase).join('|')})/.freeze
 
         # Don't use this method directly: Configuration is a singleton class,
         # use {Aws::ActiveJob::SQS.config Aws::ActiveJob::SQS.config}
