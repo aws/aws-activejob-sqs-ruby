@@ -287,7 +287,7 @@ All you need to do is:
 3. Create a lambda function from your image (see the lambda docs for details).
 4. Add an SQS Trigger for the queue(s) you want to process jobs from.
 5. Set the ENTRYPOINT to `/usr/local/bundle/bin/aws_lambda_ric` and the CMD
-to `config/environment.Aws::ActiveJob::SQS.lambda_job_handler` - this will load
+to `config/environment.Aws::ActiveJob::SQS::LambdaHandler.job_handler` - this will load
 Rails and then use the lambda handler. You can do this either as function config
 or in your Dockerfile.
 
