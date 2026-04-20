@@ -36,6 +36,7 @@ module Aws
             expect(runner).to receive(:run).and_raise StandardError
             expect do
               executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
               executor.shutdown # give the job a chance to run
             end.to raise_exception(StandardError)
           end
@@ -52,6 +53,7 @@ module Aws
               expect(executor).to receive(:shutdown).exactly(1).times.and_call_original
 
               executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
               executor.shutdown # give the job a chance to run
             end
           end
@@ -105,6 +107,7 @@ module Aws
               expect(executor).to receive(:shutdown).exactly(1).times.and_call_original
 
               executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
               executor.shutdown
             end
           end
