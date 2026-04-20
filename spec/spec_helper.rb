@@ -76,22 +76,6 @@ RSpec.configure do |config|
   # triggering implicit auto-inclusion in groups with matching metadata.
   config.shared_context_metadata_behavior = :apply_to_host_groups
 
-  # handle flaky jruby specs
-  if defined?(JRUBY_VERSION)
-    config.around(:each, :jruby_flaky) do |example|
-      attempt = 0
-      retries = 3
-      loop do
-        attempt += 1
-        example.run
-        break if !example.exception || attempt >= retries
-
-        example.example.instance_variable_set(:@exception, nil)
-        redo
-      end
-    end
-  end
-
   # Run specs in random order to surface order dependencies. If you find an
   # order dependency and want to debug it, you can fix the order by providing
   # the seed, which is printed after each run.
