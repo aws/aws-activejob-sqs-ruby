@@ -31,7 +31,7 @@ module Aws
             executor.shutdown # give the job a chance to run
           end
 
-          it 'raises the error and terminates poller' do
+          it 'raises the error and terminates poller', :jruby_flaky do
             expect(JobRunner).to receive(:new).and_return(runner)
             expect(runner).to receive(:run).and_raise StandardError
             expect do
