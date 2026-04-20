@@ -4,6 +4,7 @@ module ActiveJob
   module QueueAdapters
     describe SqsAsyncAdapter do
       let(:client) { double('Client') }
+      let(:message_result) { instance_double(Aws::SQS::Types::SendMessageResult, message_id: '12345') }
 
       before do
         allow(Aws::ActiveJob::SQS.config).to receive(:client).and_return(client)
@@ -61,7 +62,7 @@ module ActiveJob
         allow(Aws::ActiveJob::SQS.config).to receive(:url_for)
           .and_return('https://queue-url.fifo')
         expect(Concurrent::Promises).not_to receive(:future)
-        expect(client).to receive(:send_message)
+        expect(client).to receive(:send_message).and_return(message_result)
 
         TestJobAsync.perform_later('test')
         sleep(0.2)

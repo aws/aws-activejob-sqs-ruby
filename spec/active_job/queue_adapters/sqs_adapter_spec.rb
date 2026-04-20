@@ -4,21 +4,41 @@ module ActiveJob
   module QueueAdapters
     describe SqsAdapter do
       let(:client) { double('Client') }
+      let(:aws_message_id) { '12345' }
+      let(:message_result) { instance_double(Aws::SQS::Types::SendMessageResult, message_id: aws_message_id) }
       before do
         allow(Aws::ActiveJob::SQS.config).to receive(:client).and_return(client)
       end
 
-      it 'enqueues jobs' do
-        expect(client).to receive(:send_message)
-          .with(
-            {
-              queue_url: 'https://queue-url',
-              message_body: instance_of(String),
-              message_attributes: instance_of(Hash)
-            }
-          )
-        TestJob.perform_later('test')
-        sleep(0.2)
+      context '.perform_later' do
+        it 'returns a job with provider_job_id assigned' do
+          expect(client).to receive(:send_message)
+            .with(
+              {
+                queue_url: 'https://queue-url',
+                message_body: instance_of(String),
+                message_attributes: instance_of(Hash)
+              }
+            )
+            .and_return(message_result)
+          job = TestJob.perform_later('test')
+          expect(job).to be_a(TestJob)
+          expect(job.provider_job_id).to eq(aws_message_id)
+        end
+
+        it 'enqueues jobs' do
+          expect(client).to receive(:send_message)
+            .with(
+              {
+                queue_url: 'https://queue-url',
+                message_body: instance_of(String),
+                message_attributes: instance_of(Hash)
+              }
+            )
+            .and_return(message_result)
+          TestJob.perform_later('test')
+          sleep(0.2)
+        end
       end
 
       context 'fifo queues' do
@@ -37,6 +57,7 @@ module ActiveJob
                 message_deduplication_id: instance_of(String)
               }
             )
+            .and_return(message_result)
           TestJob.perform_later('test')
           sleep(0.2)
         end
@@ -66,6 +87,7 @@ module ActiveJob
                   message_deduplication_id: hashed_body
                 }
               )
+                                                      .and_return(message_result)
 
               TestJobWithDedupKeys.perform_later('test')
               sleep(0.2)
@@ -94,6 +116,7 @@ module ActiveJob
                   message_deduplication_id: hashed_body
                 }
               )
+                                                      .and_return(message_result)
 
               TestJob.perform_later('test')
               sleep(0.2)
@@ -112,6 +135,7 @@ module ActiveJob
                 message_deduplication_id: instance_of(String)
               }
             )
+                                                    .and_return(message_result)
 
             TestJobWithMessageGroupID.perform_later('test')
             sleep(0.2)
@@ -131,6 +155,7 @@ module ActiveJob
                 message_deduplication_id: instance_of(String)
               }
             )
+                                                   .and_return(message_result)
 
             expect(TestJobWithMessageGroupID).to receive(:new).with(arg).and_return(dbl)
             expect(dbl).to receive(:message_group_id).and_return(message_group_id)
@@ -154,6 +179,7 @@ module ActiveJob
               message_attributes: instance_of(Hash)
             }
           )
+                                                  .and_return(message_result)
 
           TestJob.set(wait: 1.minute).perform_later('test')
           sleep(0.2)
@@ -170,7 +196,7 @@ module ActiveJob
               message_body: instance_of(String),
               message_attributes: instance_of(Hash)
             }
-          ).twice
+          ).twice.and_return(message_result)
 
           TestJob.set(wait: 0).perform_later('test')
           TestJob.set(wait: -1).perform_later('test')
