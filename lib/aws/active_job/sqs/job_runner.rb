@@ -8,7 +8,8 @@ module Aws
         attr_reader :id, :class_name
 
         def initialize(message)
-          @job_data = ActiveSupport::JSON.load(message.data.body)
+          @job_data = ActiveSupport::JSON.load(message.body)
+          @job_data['provider_job_id'] = message.message_id
           @class_name = @job_data['job_class'].constantize
           @id = @job_data['job_id']
         end
