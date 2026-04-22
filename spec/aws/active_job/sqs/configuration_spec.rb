@@ -7,7 +7,13 @@ module Aws
         let(:expected_file_opts) do
           {
             max_messages: 5,
-            queues: { default: { url: 'https://queue-url', max_messages: 2 } }
+            queues: queues
+          }
+        end
+
+        let(:queues) do
+          {
+            default: { url: 'https://queue-url', max_messages: 2 }
           }
         end
 
