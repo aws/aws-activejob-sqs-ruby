@@ -148,6 +148,11 @@ module Aws
         # @option options [Array] :excluded_deduplication_keys (['job_id'])
         #   The type of keys stored in the array should be String or Symbol.
         #   Using this option, job_id is implicitly added to the keys.
+        #
+        # @option options [Array<Class>, nil] :job_class_allowlist (nil)
+        #   An optional list of job classes that are permitted to be executed.
+        #   When set, only classes in this list will be dispatched. When nil,
+        #   any class inheriting from ActiveJob::Base is allowed.
 
         def initialize(options = {})
           opts = env_options.deep_merge(options)
@@ -160,7 +165,8 @@ module Aws
         # @api private
         attr_accessor :queues, :threads, :backpressure,
                       :shutdown_timeout, :logger,
-                      :async_queue_error_handler
+                      :async_queue_error_handler,
+                      :job_class_allowlist
 
         # @api private
         attr_writer :max_messages, :message_group_id, :visibility_timeout,
