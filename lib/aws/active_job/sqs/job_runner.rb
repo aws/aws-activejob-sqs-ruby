@@ -29,11 +29,11 @@ module Aws
           unless klass.is_a?(Class) && klass < ::ActiveJob::Base
             raise ArgumentError, "#{name} is not a valid job class (must inherit from ActiveJob::Base)"
           end
+
           allowlist = Aws::ActiveJob::SQS.config.job_class_allowlist
-          if allowlist && !allowlist.include?(klass)
-            raise ArgumentError, "#{name} is not in the configured job_class_allowlist"
-          end
-          klass
+          return klass unless allowlist && !allowlist.include?(klass)
+
+          raise ArgumentError, "#{name} is not in the configured job_class_allowlist"
         end
       end
     end
