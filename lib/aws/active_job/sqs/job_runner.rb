@@ -8,13 +8,16 @@ module Aws
         attr_reader :id, :class_name
 
         def initialize(message)
+          @message = message
           @job_data = ActiveSupport::JSON.load(message.data.body)
           @class_name = @job_data['job_class'].constantize
           @id = @job_data['job_id']
         end
 
         def run
-          ::ActiveJob::Base.execute @job_data
+          job = ::ActiveJob::Base.deserialize(@job_data)
+          job.sqs_message = @message if job.respond_to?(:sqs_message=)
+          job.perform_now
         end
 
         def exception_executions?

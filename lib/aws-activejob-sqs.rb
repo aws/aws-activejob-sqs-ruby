@@ -10,6 +10,15 @@ require_relative 'aws/active_job/sqs/executor'
 require_relative 'aws/active_job/sqs/job_runner'
 require_relative 'aws/active_job/sqs/lambda_handler'
 
+# Expose the raw SQS message to jobs consumed from SQS queues.
+# This allows jobs to access message metadata, extend visibility timeout,
+# read message attributes, or perform manual acknowledgement.
+# The accessor is nil when the job is not executed via the SQS poller
+# (e.g. inline adapter, tests, or other queue backends).
+ActiveSupport.on_load(:active_job) do
+  attr_accessor :sqs_message
+end
+
 module Aws
   module ActiveJob
     # ActiveJob Adapter and backend queueing using AWS SQS.

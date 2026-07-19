@@ -1,6 +1,8 @@
 Unreleased Changes
 ------------------
 
+* Feature - Expose raw SQS message to ActiveJob instances via `sqs_message` accessor. Jobs can access the message to extend visibility timeout, read message attributes, or perform manual acknowledgement.
+
 1.0.2 (2025-04-01)
 ------------------
 
