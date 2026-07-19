@@ -41,7 +41,8 @@ module Aws
               other_data = job_data.merge('job_class' => 'TestJobAsync')
               other_body = ActiveSupport::JSON.dump(other_data)
               other_msg = double(data: double(body: other_body))
-              expect { JobRunner.new(other_msg) }.to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+              expect { JobRunner.new(other_msg) }
+                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
             end
           end
         end

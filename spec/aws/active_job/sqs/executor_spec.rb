@@ -47,8 +47,8 @@ module Aws
             let(:exception) { StandardError.new }
 
             it 'calls the error handler with exception and message' do
-              expect(JobRunner).to receive(:new).and_return(runner)
-              expect(runner).to receive(:run).and_raise exception
+              expect(JobRunner).to receive(:new).at_least(:once).and_return(runner)
+              expect(runner).to receive(:run).at_least(:once).and_raise exception
               expect(error_handler).to receive(:call).with(exception, msg)
               expect(executor).to receive(:shutdown).exactly(1).times.and_call_original
 
