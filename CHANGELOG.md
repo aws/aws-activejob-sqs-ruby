@@ -1,8 +1,8 @@
 Unreleased Changes
 ------------------
 
-* Issue - Validate that job classes inherit from `ActiveJob::Base` before execution.
-* Feature - Add optional `job_class_allowlist` configuration to restrict which job classes can be dispatched.
+* Issue - Only classes inheriting from `ActiveJob::Base` are executed by the poller, preventing arbitrary classes named in an SQS message from being instantiated and run.
+* Feature - Add optional `job_class_allowlist` configuration to restrict which job classes can be dispatched. Configurable in code, the config YAML file, or via the `AWS_ACTIVE_JOB_SQS_JOB_CLASS_ALLOWLIST` environment variable.
 
 1.0.2 (2025-04-01)
 ------------------

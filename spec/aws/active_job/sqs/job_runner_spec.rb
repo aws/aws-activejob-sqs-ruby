@@ -45,6 +45,38 @@ module Aws
                 .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
             end
           end
+
+          context 'with a string array allowlist (as loaded from YAML)' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = ['TestJob'] }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            it 'allows classes whose name is in the allowlist' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+
+            it 'rejects classes whose name is not in the allowlist' do
+              other_data = job_data.merge('job_class' => 'TestJobAsync')
+              other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
+              expect { JobRunner.new(other_msg) }
+                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+            end
+          end
+
+          context 'with a comma-separated string allowlist (as loaded from ENV)' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = 'SomeJob, TestJob ,OtherJob' }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            it 'allows classes whose name is in the allowlist, ignoring whitespace' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+
+            it 'rejects classes whose name is not in the allowlist' do
+              other_data = job_data.merge('job_class' => 'TestJobAsync')
+              other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
+              expect { JobRunner.new(other_msg) }
+                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+            end
+          end
         end
       end
     end

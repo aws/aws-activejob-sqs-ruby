@@ -111,6 +111,36 @@ export AWS_ACTIVE_JOB_SQS_MAX_MESSAGES = 5
 export AWS_ACTIVE_JOB_SQS_DEFAULT_URL = https://my-queue.aws
 ```
 
+### Restricting which job classes can run
+
+The poller only executes classes that inherit from `ActiveJob::Base`, so an
+arbitrary class named in an SQS message cannot be instantiated and run. To
+restrict execution further, set `job_class_allowlist` to the classes you expect
+to process. When set, any job whose class is not in the list is rejected.
+
+In code, entries may be Class objects or class name Strings:
+
+```ruby
+Aws::ActiveJob::SQS.configure do |config|
+  config.job_class_allowlist = [MyJob, 'OtherJob']
+end
+```
+
+In the YAML file, provide a list of class names:
+
+```yaml
+# config/aws_active_job_sqs.yml
+job_class_allowlist:
+  - MyJob
+  - OtherJob
+```
+
+Through the environment, provide a comma-separated list of class names:
+
+```shell
+export AWS_ACTIVE_JOB_SQS_JOB_CLASS_ALLOWLIST="MyJob,OtherJob"
+```
+
 ## Usage
 
 To queue a job, you can just use standard ActiveJob methods:
