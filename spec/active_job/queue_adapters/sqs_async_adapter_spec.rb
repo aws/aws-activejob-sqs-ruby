@@ -57,14 +57,22 @@ module ActiveJob
         I18n.available_locales = []
       end
 
-      it 'queues jobs to fifo queues synchronously' do
-        allow(Aws::ActiveJob::SQS.config).to receive(:url_for)
-          .and_return('https://queue-url.fifo')
+      it 'queues jobs to FIFO queues synchronously' do
+        allow(Aws::ActiveJob::SQS.config).to receive(:url_for).and_return('https://queue-url.fifo')
         expect(Concurrent::Promises).not_to receive(:future)
         expect(client).to receive(:send_message)
 
         TestJobAsync.perform_later('test')
         sleep(0.2)
+      end
+
+      it 'raises when a delayed job on a FIFO queue' do
+        allow(Aws::ActiveJob::SQS.config).to receive(:url_for).and_return('https://queue-url.fifo')
+        expect(client).not_to receive(:send_message)
+
+        expect do
+          TestJobAsync.set(wait: 1.minute).perform_later('test')
+        end.to raise_error(Aws::ActiveJob::SQS::FifoDelayNotSupportedError)
       end
     end
   end

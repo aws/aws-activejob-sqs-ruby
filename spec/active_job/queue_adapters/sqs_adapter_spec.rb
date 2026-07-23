@@ -101,6 +101,40 @@ module ActiveJob
           end
         end
 
+        context 'with queue delay' do
+          it 'raises when given a delayed job' do
+            expect do
+              TestJob.set(wait: 1.minute).perform_later('test')
+            end.to raise_error(
+              Aws::ActiveJob::SQS::FifoDelayNotSupportedError,
+              /does not support per-message delays/
+            )
+          end
+
+          it 'raises when delayed jobs are in a batch' do
+            jobs = [
+              TestJob.new('test').set(wait: 1.minute),
+              TestJob.new('test').set(wait: 1.minute)
+            ]
+            expect do
+              ActiveJob.perform_all_later(jobs)
+            end.to raise_error(Aws::ActiveJob::SQS::FifoDelayNotSupportedError)
+          end
+
+          it 'enqueues jobs with zero or negative delay' do
+            expect(client).to receive(:send_message).with(
+              hash_including(
+                queue_url: 'https://queue-url.fifo',
+                delay_seconds: 0
+              )
+            ).twice
+
+            TestJob.set(wait: 0).perform_later('test')
+            TestJob.set(wait: -1).perform_later('test')
+            sleep(0.2)
+          end
+        end
+
         context 'when job has #message_group_id defined' do
           it 'adds message_deduplication_id and default message_group_id if job does not return a value' do
             expect(client).to receive(:send_message).with(
