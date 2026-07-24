@@ -75,6 +75,7 @@ module Aws
               executor.execute(msg) # first message runs
               executor.execute(msg) # second message enters queue
               executor.execute(msg) # third message triggers wait
+              executor.shutdown # wait for tasks to finish so none leak into other examples
             end
           end
         end
