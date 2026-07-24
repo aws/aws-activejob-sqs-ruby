@@ -58,14 +58,6 @@ jobs:
       - name: Set RAILS_VERSION
         run: echo "RAILS_VERSION=${{ matrix.rails }}" >> $GITHUB_ENV
 
-      # JRuby 10 requires Java 21; the runner default is too old
-      - name: Setup Java for JRuby
-        if: startsWith(matrix.ruby, 'jruby')
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:

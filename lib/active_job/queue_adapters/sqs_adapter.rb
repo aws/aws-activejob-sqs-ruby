@@ -66,19 +66,18 @@ module ActiveJob
         entry
       end
 
-      # SQS FIFO queues do not support per-message delays - fail fast with a
-      # clear error rather than an Aws::SQS::Errors::InvalidParameterValue at
-      # send time. delay of 0 is accepted by SQS and does not raise.
+      # SQS FIFO queues do not support per-message delays
       def validate_fifo_delay!(job, delay)
         return unless delay.positive?
 
         queue_url = Aws::ActiveJob::SQS.config.url_for(job.queue_name)
         return unless Aws::ActiveJob::SQS.fifo?(queue_url)
 
-        raise Aws::ActiveJob::SQS::FifoDelayNotSupportedError,
-              "FIFO queue #{queue_url} does not support per-message delays " \
-              '(e.g. `set(wait:)`, `enqueue_at` or `retry_on wait:`). ' \
-              'When using `retry_on` with FIFO queues, set `wait: 0`.'
+        err_msg =
+          "FIFO queue #{queue_url} does not support per-message delays " \
+          '(e.g. `set(wait:)`, `enqueue_at` or `retry_on wait:`). ' \
+          'When using `retry_on` with FIFO queues, set `wait: 0`.'
+        raise Aws::ActiveJob::SQS::FifoDelayNotSupportedError, err_msg
       end
 
       def _enqueue(job, body = nil, send_message_opts = {})

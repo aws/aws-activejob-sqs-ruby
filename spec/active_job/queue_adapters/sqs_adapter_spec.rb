@@ -21,7 +21,7 @@ module ActiveJob
         sleep(0.2)
       end
 
-      context 'fifo queues' do
+      context 'FIFO queues' do
         before do
           allow(Aws::ActiveJob::SQS.config).to receive(:url_for).and_return('https://queue-url.fifo')
         end
@@ -106,8 +106,7 @@ module ActiveJob
             expect do
               TestJob.set(wait: 1.minute).perform_later('test')
             end.to raise_error(
-              Aws::ActiveJob::SQS::FifoDelayNotSupportedError,
-              /does not support per-message delays/
+              Aws::ActiveJob::SQS::FifoDelayNotSupportedError, /does not support per-message delays/
             )
           end
 
@@ -123,10 +122,7 @@ module ActiveJob
 
           it 'enqueues jobs with zero or negative delay' do
             expect(client).to receive(:send_message).with(
-              hash_including(
-                queue_url: 'https://queue-url.fifo',
-                delay_seconds: 0
-              )
+              hash_including(queue_url: 'https://queue-url.fifo', delay_seconds: 0)
             ).twice
 
             TestJob.set(wait: 0).perform_later('test')
