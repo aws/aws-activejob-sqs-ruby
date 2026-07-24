@@ -6,6 +6,12 @@ gemspec
 
 gem 'rake', require: false
 
+if defined?(JRUBY_VERSION)
+  # rdoc >= 8.0.0 depends on rbs, which fails to build its native ext on JRuby
+  # https://github.com/ruby/rbs/issues/3018
+  gem 'rdoc', '< 8.0.0'
+end
+
 case ENV.fetch('RAILS_VERSION', nil)
 when '7.1'
   gem 'rails', '~> 7.1.0'
