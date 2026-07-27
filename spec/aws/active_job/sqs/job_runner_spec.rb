@@ -26,7 +26,7 @@ module Aws
             bad_data = job_data.merge('job_class' => 'String')
             bad_body = ActiveSupport::JSON.dump(bad_data)
             bad_msg = double(data: double(body: bad_body))
-            expect { JobRunner.new(bad_msg) }.to raise_error(ArgumentError, /not a valid job class/)
+            expect { JobRunner.new(bad_msg) }.to raise_error(InvalidJobClassError, /not a valid job class/)
           end
 
           context 'with job_class_allowlist configured' do
@@ -42,7 +42,7 @@ module Aws
               other_body = ActiveSupport::JSON.dump(other_data)
               other_msg = double(data: double(body: other_body))
               expect { JobRunner.new(other_msg) }
-                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+                .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
 
@@ -58,7 +58,7 @@ module Aws
               other_data = job_data.merge('job_class' => 'TestJobAsync')
               other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
               expect { JobRunner.new(other_msg) }
-                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+                .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
 
@@ -74,7 +74,7 @@ module Aws
               other_data = job_data.merge('job_class' => 'TestJobAsync')
               other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
               expect { JobRunner.new(other_msg) }
-                .to raise_error(ArgumentError, /not in the configured job_class_allowlist/)
+                .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
         end

@@ -3,6 +3,15 @@
 module Aws
   module ActiveJob
     module SQS
+      # Raised when a message names a job class that cannot be executed:
+      # either it does not name a class inheriting from ActiveJob::Base, or it
+      # is not in the configured job_class_allowlist. This is a permanent
+      # failure: such a message can never succeed, so the executor logs and
+      # deletes it rather than letting it redeliver. A dedicated type (rather
+      # than a generic ArgumentError) keeps it distinct from errors raised from
+      # inside a job's own #perform, which remain retryable.
+      class InvalidJobClassError < StandardError; end
+
       # @api private
       class JobRunner
         attr_reader :id, :class_name
@@ -27,13 +36,13 @@ module Aws
         def resolve_job_class(name)
           klass = name.safe_constantize
           unless klass.is_a?(Class) && klass < ::ActiveJob::Base
-            raise ArgumentError, "#{name} is not a valid job class (must inherit from ActiveJob::Base)"
+            raise InvalidJobClassError, "#{name} is not a valid job class (must inherit from ActiveJob::Base)"
           end
 
           allowlist = normalized_allowlist
           return klass if allowlist.nil? || allowlist.include?(klass.name)
 
-          raise ArgumentError, "#{name} is not in the configured job_class_allowlist"
+          raise InvalidJobClassError, "#{name} is not in the configured job_class_allowlist"
         end
 
         # The allowlist may be configured as an Array of Class values (in code),

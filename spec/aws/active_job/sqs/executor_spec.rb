@@ -4,7 +4,7 @@ module Aws
   module ActiveJob
     module SQS
       describe Executor do
-        let(:logger) { double(info: nil, debug: nil) }
+        let(:logger) { double(info: nil, debug: nil, error: nil) }
 
         before do
           allow(ActiveSupport::Logger).to receive(:new).and_return(logger)
@@ -39,6 +39,27 @@ module Aws
               sleep(0.1) if defined?(JRUBY_VERSION)
               executor.shutdown # give the job a chance to run
             end.to raise_exception(StandardError)
+          end
+
+          it 'deletes the message and does not re-raise when the job class is invalid' do
+            expect(JobRunner).to receive(:new).and_raise(InvalidJobClassError, 'File is not a valid job class')
+            expect(msg).to receive(:delete)
+            expect(msg).to receive(:message_id).and_return('stub-id')
+            expect do
+              executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
+              executor.shutdown # give the task a chance to run
+            end.not_to raise_error
+          end
+
+          it 'deletes the message and does not re-raise when the body cannot be parsed' do
+            expect(JobRunner).to receive(:new).and_raise(JSON::ParserError.new('unexpected token'))
+            expect(msg).to receive(:delete)
+            expect do
+              executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
+              executor.shutdown # give the task a chance to run
+            end.not_to raise_error
           end
 
           describe 'error_handler' do
