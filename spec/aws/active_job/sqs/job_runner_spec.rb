@@ -22,11 +22,40 @@ module Aws
         end
 
         describe 'job class validation' do
+          def msg_for(class_name)
+            double(data: double(body: ActiveSupport::JSON.dump(job_data.merge('job_class' => class_name))))
+          end
+
           it 'rejects classes that do not inherit from ActiveJob::Base' do
-            bad_data = job_data.merge('job_class' => 'String')
-            bad_body = ActiveSupport::JSON.dump(bad_data)
-            bad_msg = double(data: double(body: bad_body))
-            expect { JobRunner.new(bad_msg) }.to raise_error(InvalidJobClassError, /not a valid job class/)
+            expect { JobRunner.new(msg_for('String')) }
+              .to raise_error(InvalidJobClassError, /must inherit from ActiveJob::Base/)
+          end
+
+          it 'rejects undefined classes' do
+            expect { JobRunner.new(msg_for('NoSuchJob')) }
+              .to raise_error(InvalidJobClassError, /is not defined/)
+          end
+
+          it 'rejects names that are not well-formed constant paths' do
+            ['', 'test_job', 'TestJob; puts 1', 'TestJob()', 'Test Job', '@job', 'Test-Job'].each do |name|
+              expect { JobRunner.new(msg_for(name)) }
+                .to raise_error(InvalidJobClassError, /is not a valid job class name/)
+            end
+          end
+
+          it 'rejects a name that resolves only through an ancestor of the namespace' do
+            # TestJob does not define ClassMethods, but its ancestors do, so
+            # an inheriting lookup would resolve this to
+            # ActiveJob::Exceptions::ClassMethods. Constants reachable only
+            # through the ancestor chain are not job classes and must not
+            # widen what a message can name.
+            expect { JobRunner.new(msg_for('TestJob::ClassMethods')) }
+              .to raise_error(InvalidJobClassError, /is not defined/)
+          end
+
+          it 'does not resolve the constant when the name is malformed' do
+            expect_any_instance_of(JobRunner).not_to receive(:constantize_job_class)
+            expect { JobRunner.new(msg_for('not_a_class_name')) }.to raise_error(InvalidJobClassError)
           end
 
           context 'with job_class_allowlist configured' do
@@ -38,10 +67,20 @@ module Aws
             end
 
             it 'rejects classes not in the allowlist' do
-              other_data = job_data.merge('job_class' => 'TestJobAsync')
-              other_body = ActiveSupport::JSON.dump(other_data)
-              other_msg = double(data: double(body: other_body))
-              expect { JobRunner.new(other_msg) }
+              expect { JobRunner.new(msg_for('TestJobAsync')) }
+                .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
+            end
+
+            it 'rejects a disallowed name without resolving its constant' do
+              # Resolving is what triggers autoloading, so a name the allowlist
+              # excludes must be rejected before the lookup happens.
+              expect_any_instance_of(JobRunner).not_to receive(:constantize_job_class)
+              expect { JobRunner.new(msg_for('TestJobAsync')) }
+                .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
+            end
+
+            it 'rejects a disallowed name even when it is undefined' do
+              expect { JobRunner.new(msg_for('NoSuchJob')) }
                 .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
@@ -55,9 +94,7 @@ module Aws
             end
 
             it 'rejects classes whose name is not in the allowlist' do
-              other_data = job_data.merge('job_class' => 'TestJobAsync')
-              other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
-              expect { JobRunner.new(other_msg) }
+              expect { JobRunner.new(msg_for('TestJobAsync')) }
                 .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
@@ -71,9 +108,7 @@ module Aws
             end
 
             it 'rejects classes whose name is not in the allowlist' do
-              other_data = job_data.merge('job_class' => 'TestJobAsync')
-              other_msg = double(data: double(body: ActiveSupport::JSON.dump(other_data)))
-              expect { JobRunner.new(other_msg) }
+              expect { JobRunner.new(msg_for('TestJobAsync')) }
                 .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
