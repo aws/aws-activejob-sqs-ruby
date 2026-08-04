@@ -8,9 +8,7 @@ module Aws
       # job_class_allowlist, it is undefined, or it does not name a class
       # inheriting from ActiveJob::Base. This is a permanent
       # failure: such a message can never succeed, so the executor logs and
-      # deletes it rather than letting it redeliver. A dedicated type (rather
-      # than a generic ArgumentError) keeps it distinct from errors raised from
-      # inside a job's own #perform, which remain retryable.
+      # deletes it rather than letting it redeliver.
       class InvalidJobClassError < StandardError; end
 
       # @api private
