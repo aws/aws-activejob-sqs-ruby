@@ -1,6 +1,7 @@
 Unreleased Changes
 ------------------
 
+* Issue - Raise a clear error at enqueue time when a delayed job targets a FIFO queue, which does not support per-message delays (#36).
 * Issue - Only classes inheriting from `ActiveJob::Base` are executed by the poller, preventing arbitrary classes named in an SQS message from being instantiated and run. Job class names are validated as constant paths and resolved without searching the namespace's ancestors, so a message cannot name a constant outside the intended namespace.
 * Feature - Add optional `job_class_allowlist` configuration to restrict which job classes can be dispatched. Configurable in code, the config YAML file, or via the `AWS_ACTIVE_JOB_SQS_JOB_CLASS_ALLOWLIST` environment variable. When set, the allowlist is checked before the class name is resolved, so an excluded class is never loaded.
 

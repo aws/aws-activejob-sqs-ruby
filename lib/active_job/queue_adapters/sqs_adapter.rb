@@ -21,6 +21,7 @@ module ActiveJob
 
       def enqueue_at(job, timestamp)
         delay = Params.assured_delay_seconds(timestamp)
+        validate_fifo_delay!(job, delay)
         _enqueue(job, nil, delay_seconds: delay)
       end
 
@@ -45,20 +46,38 @@ module ActiveJob
       end
 
       def enqueue_batch(queue_url, chunk)
-        entries = chunk.map do |job|
-          entry = Params.new(job, nil).entry
-          entry[:id] = job.job_id
-          entry[:delay_seconds] = Params.assured_delay_seconds(job.scheduled_at) if job.scheduled_at
-          entry
-        end
-
         send_message_opts = {
           queue_url: queue_url,
-          entries: entries
+          entries: chunk.map { |job| batch_entry(job) }
         }
 
         send_message_batch_result = Aws::ActiveJob::SQS.config.client.send_message_batch(send_message_opts)
         send_message_batch_result.successful.count
+      end
+
+      def batch_entry(job)
+        entry = Params.new(job, nil).entry
+        entry[:id] = job.job_id
+        if job.scheduled_at
+          delay = Params.assured_delay_seconds(job.scheduled_at)
+          validate_fifo_delay!(job, delay)
+          entry[:delay_seconds] = delay
+        end
+        entry
+      end
+
+      # SQS FIFO queues do not support per-message delays
+      def validate_fifo_delay!(job, delay)
+        return unless delay.positive?
+
+        queue_url = Aws::ActiveJob::SQS.config.url_for(job.queue_name)
+        return unless Aws::ActiveJob::SQS.fifo?(queue_url)
+
+        err_msg =
+          "FIFO queue #{queue_url} does not support per-message delays " \
+          '(e.g. `set(wait:)`, `enqueue_at` or `retry_on wait:`). ' \
+          'When using `retry_on` with FIFO queues, set `wait: 0`.'
+        raise Aws::ActiveJob::SQS::FifoDelayNotSupportedError, err_msg
       end
 
       def _enqueue(job, body = nil, send_message_opts = {})

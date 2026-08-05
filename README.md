@@ -360,12 +360,17 @@ If the order in which your jobs executes is important, consider using a
 [FIFO Queue](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html).
 A FIFO queue ensures that messages are processed in the order they were sent
 (First-In-First-Out) and exactly-once processing (ensuring duplicates are never
-introduced into the queue). To use a fifo queue, simply set the queue url
+introduced into the queue). To use a FIFO queue, simply set the queue url
 (which will end in ".fifo") in your config.
 
 When using FIFO queues, jobs will NOT be processed concurrently by the poller
 to ensure the correct ordering. Additionally, all jobs on a FIFO queue will be queued
 synchronously, even if you have configured the `sqs_async` adapter.
+
+FIFO queues do not support per-message delays, so delayed jobs
+(`set(wait:)`, `enqueue_at` or `retry_on ..., wait:`) raise
+`Aws::ActiveJob::SQS::FifoDelayNotSupportedError` at enqueue time. 
+When using `retry_on` with FIFO queues, set `wait: 0`.
 
 #### Message Deduplication ID
 
