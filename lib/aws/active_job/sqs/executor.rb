@@ -91,11 +91,28 @@ module Aws
           job.run
           message.delete
         rescue JSON::ParserError => e
-          @logger.error "Unable to parse message body: #{message.data.body}. Error: #{e}."
+          # An unparseable body is a permanent failure: the message content is
+          # immutable, so re-parsing it on redelivery can never succeed. Log and
+          # delete it so it does not redeliver indefinitely.
+          drop_permanent_failure(message, "Unable to parse message body: #{message.data.body}. Error: #{e}.")
+        rescue InvalidJobClassError => e
+          # A bad job class is a permanent failure: redelivering it can never
+          # succeed and, on the default config, would crash-loop the poller.
+          # Log the forensic detail (the message can't be inspected in a DLQ
+          # once deleted) and delete it so it does not redeliver.
+          drop_permanent_failure(message, "Rejecting message #{message.message_id}: #{e}. " \
+                                          "Body: #{message.data.body}. Deleting so it does not redeliver.")
         rescue StandardError => e
           handle_standard_error(e, job, message)
         ensure
           @task_complete.set
+        end
+
+        # Log a permanently-failed message and delete it so SQS does not
+        # redeliver it (which, on the default config, would crash-loop the poller).
+        def drop_permanent_failure(message, log_message)
+          @logger.error log_message
+          message.delete
         end
 
         def handle_standard_error(error, job, message)

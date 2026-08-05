@@ -69,6 +69,7 @@ module Aws
           shutdown_timeout
           visibility_timeout
           message_group_id
+          job_class_allowlist
         ].freeze
 
         QUEUE_ENV_CONFIGS = %i[
@@ -148,6 +149,13 @@ module Aws
         # @option options [Array] :excluded_deduplication_keys (['job_id'])
         #   The type of keys stored in the array should be String or Symbol.
         #   Using this option, job_id is implicitly added to the keys.
+        #
+        # @option options [Array<Class, String>, String, nil] :job_class_allowlist (nil)
+        #   An optional list of job classes permitted to be executed. When set,
+        #   only classes in this list are dispatched; when nil, any class
+        #   inheriting from ActiveJob::Base is allowed. Entries may be Class
+        #   objects or class name Strings (in code/YAML), or a comma-separated
+        #   String of class names (from ENV), and are compared by class name.
 
         def initialize(options = {})
           opts = env_options.deep_merge(options)
@@ -160,7 +168,8 @@ module Aws
         # @api private
         attr_accessor :queues, :threads, :backpressure,
                       :shutdown_timeout, :logger,
-                      :async_queue_error_handler
+                      :async_queue_error_handler,
+                      :job_class_allowlist
 
         # @api private
         attr_writer :max_messages, :message_group_id, :visibility_timeout,

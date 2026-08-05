@@ -5,6 +5,11 @@ source 'https://rubygems.org'
 gemspec
 
 gem 'rake', require: false
+if defined?(JRUBY_VERSION)
+  gem 'rdoc', '< 8.0.0'
+else
+  gem 'rdoc'
+end
 
 if defined?(JRUBY_VERSION)
   # rdoc >= 8.0.0 depends on rbs, which fails to build its native ext on JRuby
