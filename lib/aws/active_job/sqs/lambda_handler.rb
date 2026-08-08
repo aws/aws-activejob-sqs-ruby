@@ -29,17 +29,17 @@ module Aws
           private
 
           def to_sqs_msg(record)
-            msg = Aws::SQS::Types::Message.new(
+            data = {
               body: record['body'],
               md5_of_body: record['md5OfBody'],
               message_attributes: to_message_attributes(record),
               message_id: record['messageId'],
               receipt_handle: record['receiptHandle']
-            )
+            }
             Aws::SQS::Message.new(
               queue_url: to_queue_url(record),
-              receipt_handle: msg.receipt_handle,
-              data: msg,
+              receipt_handle: msg[:receipt_handle],
+              data: data,
               client: Aws::ActiveJob::SQS.config.client
             )
           end
