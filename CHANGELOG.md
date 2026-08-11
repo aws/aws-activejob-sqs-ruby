@@ -1,4 +1,4 @@
-Unreleased Changes
+1.1.0 (2026-08-11)
 ------------------
 
 * Issue - Raise a clear error at enqueue time when a delayed job targets a FIFO queue, which does not support per-message delays (#36).
