@@ -1,4 +1,4 @@
-Unreleased Changes
+1.1.1 (2026-08-12)
 ------------------
 
 * Issue - Fixed an empty or blank `job_class_allowlist` causing every job to be rejected and deleted. A blank allowlist is now treated as no allowlist, so all jobs run.
