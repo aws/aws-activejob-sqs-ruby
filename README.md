@@ -124,6 +124,11 @@ Setting it is recommended when the queue is reachable by anything you do not
 control, since it makes the set of executable classes explicit rather than
 "every job class in the application".
 
+A blank or empty allowlist (for example a declared-but-unset environment
+variable, or an empty list) is treated the same as leaving it unset: all job
+classes are allowed. To actually restrict execution, the list must be
+non-empty.
+
 In code, entries may be Class objects or class name Strings:
 
 ```ruby

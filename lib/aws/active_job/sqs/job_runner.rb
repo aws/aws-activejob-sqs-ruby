@@ -78,8 +78,11 @@ module Aws
         # (from ENV). Normalize all forms to an Array of class name Strings.
         def normalized_allowlist
           allowlist = Aws::ActiveJob::SQS.config.job_class_allowlist
+          return if allowlist.nil?
+
           allowlist = allowlist.split(',') if allowlist.is_a?(String)
-          allowlist&.map { |entry| entry.to_s.strip }
+          normalized = allowlist.map { |entry| entry.to_s.strip }.reject(&:empty?)
+          normalized unless normalized.empty?
         end
       end
     end

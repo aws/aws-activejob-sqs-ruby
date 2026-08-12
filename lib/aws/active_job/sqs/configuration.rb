@@ -151,11 +151,15 @@ module Aws
         #   Using this option, job_id is implicitly added to the keys.
         #
         # @option options [Array<Class, String>, String, nil] :job_class_allowlist (nil)
-        #   An optional list of job classes permitted to be executed. When set,
-        #   only classes in this list are dispatched; when nil, any class
+        #   An optional list of job classes permitted to be executed. When set
+        #   to a non-empty list, only classes in it are dispatched and any
+        #   other class is rejected; when nil, blank, or empty, any class
         #   inheriting from ActiveJob::Base is allowed. Entries may be Class
         #   objects or class name Strings (in code/YAML), or a comma-separated
-        #   String of class names (from ENV), and are compared by class name.
+        #   String of class names (from ENV), and are compared by class name. A
+        #   blank or empty value (a declared-but-empty environment variable or
+        #   an empty list) is treated the same as unset, allowing all classes,
+        #   not as "allow nothing".
 
         def initialize(options = {})
           opts = env_options.deep_merge(options)

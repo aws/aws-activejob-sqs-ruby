@@ -112,6 +112,24 @@ module Aws
                 .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
+
+          context 'with a blank allowlist (declared-but-empty ENV var)' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = '' }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            it 'treats a blank allowlist as no allowlist (allows all classes)' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+          end
+
+          context 'with an empty-array allowlist (as loaded from YAML [])' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = [] }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            it 'treats an empty array as no allowlist (allows all classes)' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+          end
         end
       end
     end
