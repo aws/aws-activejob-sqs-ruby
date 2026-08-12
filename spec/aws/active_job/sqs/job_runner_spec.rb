@@ -112,6 +112,28 @@ module Aws
                 .to raise_error(InvalidJobClassError, /not in the configured job_class_allowlist/)
             end
           end
+
+          context 'with a blank allowlist (declared-but-empty ENV var)' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = '' }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            # A blank value is what deployment tooling emits for a
+            # declared-but-unfilled variable. It should mean "no allowlist"
+            # (allow all), the same as nil - not "deny everything". Regression
+            # test for issue #39 part 1.
+            it 'treats a blank allowlist as no allowlist (allows all classes)' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+          end
+
+          context 'with an empty-array allowlist (as loaded from YAML [])' do
+            before { Aws::ActiveJob::SQS.config.job_class_allowlist = [] }
+            after { Aws::ActiveJob::SQS.config.job_class_allowlist = nil }
+
+            it 'treats an empty array as no allowlist (allows all classes)' do
+              expect { JobRunner.new(msg) }.not_to raise_error
+            end
+          end
         end
       end
     end
