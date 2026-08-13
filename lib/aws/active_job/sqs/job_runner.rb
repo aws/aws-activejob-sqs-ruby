@@ -11,6 +11,16 @@ module Aws
       # deletes it rather than letting it redeliver.
       class InvalidJobClassError < StandardError; end
 
+      # Raised when a message names a class not defined in this process.
+      #
+      # Recoverable in a way other {InvalidJobClassError} causes (malformed
+      # name, disallowed class, non-job class) aren't: during a rolling deploy,
+      # redelivering to a newer worker that has the class may succeed. Subclasses
+      # {InvalidJobClassError} so existing rescues still catch it; a
+      # +permanent_failure_handler+ can single it out and keep the message on
+      # the queue for redelivery.
+      class JobClassNotDefinedError < InvalidJobClassError; end
+
       # @api private
       class JobRunner
         # A job class name is an (optionally namespaced) constant path and
@@ -65,12 +75,14 @@ module Aws
         # segment must be defined directly on the preceding one: a name such
         # as 'SomeJob::Foo' cannot resolve Foo from SomeJob's ancestors when
         # SomeJob itself does not define it. NameError is treated as a
-        # rejection rather than propagated: an unknown class is the same
-        # permanent failure as a disallowed one.
+        # rejection rather than propagated, but as the recoverable
+        # {JobClassNotDefinedError} subclass: an undefined class may just be
+        # missing from this process (e.g. mid rolling-deploy), unlike a
+        # malformed or disallowed name.
         def constantize_job_class(name)
           Object.const_get(name, false)
         rescue NameError
-          raise InvalidJobClassError, "#{name} is not defined"
+          raise JobClassNotDefinedError, "Job Class: #{name} is not defined"
         end
 
         # The allowlist may be configured as an Array of Class values (in code),

@@ -125,6 +125,37 @@ module Aws
         #   receive settings). Retries provided by this mechanism are
         #   after any retries configured on the job with `retry_on`.
         #
+        # @option options [Callable] :permanent_failure_handler a handler for
+        #   messages the poller is about to drop as permanently failed (an
+        #   unparseable body, or an invalid job class: see
+        #   {InvalidJobClassError}).
+        #
+        #   Called as `(error, sqs_message)` just before the message would be
+        #   deleted.
+        #
+        #   - Return normally: the message is deleted and reported to the
+        #     app's error tracker as a dropped job.
+        #   - `throw :skip_delete`: the message stays on the queue for
+        #     redelivery (subject to redrive/DLQ settings) and is not reported
+        #     as dropped. This lets a newer worker recover a
+        #     {JobClassNotDefinedError} raised mid rolling-deploy.
+        #
+        #   Only a {JobClassNotDefinedError} is recoverable this way. An
+        #   unparseable body, and the other {InvalidJobClassError} causes, will
+        #   fail identically on every redelivery, so throw only for the
+        #   recoverable case or you will pin an unprocessable message on the
+        #   queue:
+        #
+        #       config.permanent_failure_handler = lambda do |error, _message|
+        #         if error.is_a?(Aws::ActiveJob::SQS::JobClassNotDefinedError)
+        #           throw :skip_delete
+        #         end
+        #       end
+        #
+        #   Applies to the poller only. The Lambda handler does not invoke this
+        #   handler; there, a permanent failure fails the invocation and the
+        #   message redelivers until it hits the queue's redrive/DLQ limit.
+        #
         # @option options [ActiveSupport::Logger] :logger Logger to use
         #   for the poller.
         #
@@ -177,7 +208,7 @@ module Aws
 
         # @api private
         attr_writer :max_messages, :message_group_id, :visibility_timeout,
-                    :poller_error_handler, :client
+                    :poller_error_handler, :permanent_failure_handler, :client
 
         def excluded_deduplication_keys=(keys)
           @excluded_deduplication_keys = keys.map(&:to_s) | ['job_id']
@@ -186,6 +217,11 @@ module Aws
         def poller_error_handler(&block)
           @poller_error_handler = block if block_given?
           @poller_error_handler
+        end
+
+        def permanent_failure_handler(&block)
+          @permanent_failure_handler = block if block_given?
+          @permanent_failure_handler
         end
 
         def client
