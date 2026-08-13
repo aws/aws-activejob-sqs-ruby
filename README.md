@@ -232,6 +232,40 @@ Aws::ActiveJob::SQS.configure do |config|
 end
 ```
 
+#### Permanently-failed messages
+
+Some messages can never run: an unparseable body, or a `job_class` that is
+malformed, not in your `job_class_allowlist`, or not defined in the process
+(raised as `Aws::ActiveJob::SQS::InvalidJobClassError`). The poller logs these
+and deletes them so they do not redeliver and crash-loop the worker. Because a
+single log line is easy to miss, the poller also reports the failure to the
+[Rails error reporter](https://guides.rubyonrails.org/error_reporting.html)
+(`Rails.error.report`), so it surfaces in whatever error tracker your app uses
+(Sentry, Datadog, CloudWatch, etc.). This is always on and needs no configuration.
+
+One case is recoverable: during a rolling deploy an older worker can receive a
+job for a class only newer workers have, raising
+`Aws::ActiveJob::SQS::JobClassNotDefinedError` (a subclass of
+`InvalidJobClassError`). To keep such a message on the queue so SQS can
+redeliver it to a newer worker, configure a `permanent_failure_handler` and
+`throw :skip_delete`:
+
+```ruby
+Aws::ActiveJob::SQS.configure do |config|
+  config.permanent_failure_handler = lambda do |error, _sqs_message|
+    # keep undefined-class messages on the queue for redelivery;
+    # everything else is deleted as usual
+    throw :skip_delete if error.is_a?(Aws::ActiveJob::SQS::JobClassNotDefinedError)
+  end
+end
+```
+
+The handler is called with `|error, sqs_message|` after the failure is
+reported and before the message is deleted. If it returns without throwing,
+the message is deleted as usual. Skipped messages stay on the queue and are
+redelivered per the queue's redrive/DLQ settings, so configure a DLQ to bound
+retries (otherwise a message that never resolves redelivers until the queue's
+retention period).
 
 When using the Async adapter, you may want to configure a
 `async_queue_error_handler` to handle errors that may occur when queuing jobs. 

@@ -1,6 +1,8 @@
 Unreleased Changes
 ------------------
 
+* Feature - Report a dropped job to the Rails error reporter and add an optional `permanent_failure_handler` so apps can keep unresolvable jobs on the queue for redelivery instead of losing them (#39).
+
 * Issue - `perform_all_later` no longer partially enqueues a batch before raising when one of the jobs has a delay on a FIFO queue (#40).
 
 1.1.1 (2026-08-12)
