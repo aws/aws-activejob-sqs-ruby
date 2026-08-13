@@ -48,7 +48,7 @@ module Aws
       # {GLOBAL_ENV_CONFIGS}.  For supported queue specific ENV configurations
       # see: {QUEUE_ENV_CONFIGS}.
       #
-      class Configuration
+      class Configuration # rubocop:disable Metrics/ClassLength
         # Default configuration options
         # @api private
         DEFAULTS = {

@@ -85,7 +85,7 @@ module Aws
           end
         end
 
-        def execute_task(message)
+        def execute_task(message) # rubocop:disable Metrics/MethodLength
           job = JobRunner.new(message)
           @logger.info("Running job: #{job.id}[#{job.class_name}]")
           job.run
