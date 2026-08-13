@@ -125,36 +125,15 @@ module Aws
         #   receive settings). Retries provided by this mechanism are
         #   after any retries configured on the job with `retry_on`.
         #
-        # @option options [Callable] :permanent_failure_handler a handler for
-        #   messages the poller is about to drop as permanently failed (an
-        #   unparseable body, or an invalid job class: see
-        #   {InvalidJobClassError}).
-        #
-        #   Called as `(error, sqs_message)` just before the message would be
-        #   deleted.
-        #
-        #   - Return normally: the message is deleted and reported to the
-        #     app's error tracker as a dropped job.
-        #   - `throw :skip_delete`: the message stays on the queue for
-        #     redelivery (subject to redrive/DLQ settings) and is not reported
-        #     as dropped. This lets a newer worker recover a
-        #     {JobClassNotDefinedError} raised mid rolling-deploy.
-        #
-        #   Only a {JobClassNotDefinedError} is recoverable this way. An
-        #   unparseable body, and the other {InvalidJobClassError} causes, will
-        #   fail identically on every redelivery, so throw only for the
-        #   recoverable case or you will pin an unprocessable message on the
-        #   queue:
-        #
-        #       config.permanent_failure_handler = lambda do |error, _message|
-        #         if error.is_a?(Aws::ActiveJob::SQS::JobClassNotDefinedError)
-        #           throw :skip_delete
-        #         end
-        #       end
-        #
-        #   Applies to the poller only. The Lambda handler does not invoke this
-        #   handler; there, a permanent failure fails the invocation and the
-        #   message redelivers until it hits the queue's redrive/DLQ limit.
+        # @option options [Callable] :permanent_failure_handler a handler called
+        #   as `(error, sqs_message)` just before the poller deletes a
+        #   permanently-failed message (unparseable body or an
+        #   {InvalidJobClassError}). Return normally to delete and report the
+        #   drop; `throw :skip_delete` to keep the message on the queue for
+        #   redelivery and skip the report. Intended for recovering a
+        #   {JobClassNotDefinedError} raised mid rolling-deploy; throwing for
+        #   other causes will pin an unprocessable message on the queue. Poller
+        #   only; the Lambda handler ignores it. See the README for details.
         #
         # @option options [ActiveSupport::Logger] :logger Logger to use
         #   for the poller.
