@@ -85,7 +85,7 @@ module Aws
           end
         end
 
-        def execute_task(message)
+        def execute_task(message) # rubocop:disable Metrics/MethodLength
           job = JobRunner.new(message)
           @logger.info("Running job: #{job.id}[#{job.class_name}]")
           job.run
@@ -94,25 +94,62 @@ module Aws
           # An unparseable body is a permanent failure: the message content is
           # immutable, so re-parsing it on redelivery can never succeed. Log and
           # delete it so it does not redeliver indefinitely.
-          drop_permanent_failure(message, "Unable to parse message body: #{message.data.body}. Error: #{e}.")
+          parser_msg = "Unable to parse message body: #{message.data.body}. Error: #{e}."
+          drop_permanent_failure(message, e, parser_msg)
         rescue InvalidJobClassError => e
           # A bad job class is a permanent failure: redelivering it can never
           # succeed and, on the default config, would crash-loop the poller.
           # Log the forensic detail (the message can't be inspected in a DLQ
           # once deleted) and delete it so it does not redeliver.
-          drop_permanent_failure(message, "Rejecting message #{message.message_id}: #{e}. " \
-                                          "Body: #{message.data.body}. Deleting so it does not redeliver.")
+          invalid_msg =
+            "Rejecting message #{message.message_id}: #{e}. " \
+            "Body: #{message.data.body}. Deleting so it does not redeliver."
+          drop_permanent_failure(message, e, invalid_msg)
         rescue StandardError => e
           handle_standard_error(e, job, message)
         ensure
           @task_complete.set
         end
 
-        # Log a permanently-failed message and delete it so SQS does not
-        # redeliver it (which, on the default config, would crash-loop the poller).
-        def drop_permanent_failure(message, log_message)
+        # Handle a permanently-failed message (unparseable body or invalid job
+        # class). Always logged. A dropped message is also reported to the
+        # error tracker so the loss is visible beyond the logs, then deleted so
+        # SQS won't redeliver. A configured +permanent_failure_handler+ can
+        # +throw :skip_delete+ to keep the message on the queue for redelivery
+        # instead, in which case it is neither reported nor deleted.
+        def drop_permanent_failure(message, error, log_message)
           @logger.error log_message
-          message.delete
+
+          handler = Aws::ActiveJob::SQS.config.permanent_failure_handler
+          unless handler
+            report_permanent_failure(error, message)
+            return message.delete
+          end
+
+          catch(:skip_delete) do
+            begin
+              handler.call(error, message)
+            rescue StandardError => e
+              @logger.error "permanent_failure_handler raised: #{e}"
+            end
+            report_permanent_failure(error, message)
+            message.delete
+          end
+        end
+
+        # Report a permanently-dropped job to the application's error tracker
+        # via Rails' error reporter (Rails 7+), if available, so the loss
+        # surfaces in whatever tracker the app uses. A no-op outside Rails.
+        # Only called when the message is actually deleted, so a message kept
+        # for redelivery via +:skip_delete+ is not reported as dropped.
+        def report_permanent_failure(error, message)
+          return unless defined?(::Rails) && ::Rails.respond_to?(:error)
+
+          ::Rails.error.report(
+            error,
+            handled: true,
+            context: { message_id: message.message_id, body: message.data.body }
+          )
         end
 
         def handle_standard_error(error, job, message)

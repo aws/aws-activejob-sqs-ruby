@@ -48,7 +48,7 @@ module Aws
       # {GLOBAL_ENV_CONFIGS}.  For supported queue specific ENV configurations
       # see: {QUEUE_ENV_CONFIGS}.
       #
-      class Configuration
+      class Configuration # rubocop:disable Metrics/ClassLength
         # Default configuration options
         # @api private
         DEFAULTS = {
@@ -125,6 +125,16 @@ module Aws
         #   receive settings). Retries provided by this mechanism are
         #   after any retries configured on the job with `retry_on`.
         #
+        # @option options [Callable] :permanent_failure_handler a handler called
+        #   as `(error, sqs_message)` just before the poller deletes a
+        #   permanently-failed message (unparseable body or an
+        #   {InvalidJobClassError}). Return normally to delete and report the
+        #   drop; `throw :skip_delete` to keep the message on the queue for
+        #   redelivery and skip the report. Intended for recovering a
+        #   {JobClassNotDefinedError} raised mid rolling-deploy; throwing for
+        #   other causes will pin an unprocessable message on the queue. Poller
+        #   only; the Lambda handler ignores it. See the README for details.
+        #
         # @option options [ActiveSupport::Logger] :logger Logger to use
         #   for the poller.
         #
@@ -177,7 +187,7 @@ module Aws
 
         # @api private
         attr_writer :max_messages, :message_group_id, :visibility_timeout,
-                    :poller_error_handler, :client
+                    :poller_error_handler, :permanent_failure_handler, :client
 
         def excluded_deduplication_keys=(keys)
           @excluded_deduplication_keys = keys.map(&:to_s) | ['job_id']
@@ -186,6 +196,11 @@ module Aws
         def poller_error_handler(&block)
           @poller_error_handler = block if block_given?
           @poller_error_handler
+        end
+
+        def permanent_failure_handler(&block)
+          @permanent_failure_handler = block if block_given?
+          @permanent_failure_handler
         end
 
         def client

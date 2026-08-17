@@ -31,9 +31,15 @@ module Aws
               .to raise_error(InvalidJobClassError, /must inherit from ActiveJob::Base/)
           end
 
-          it 'rejects undefined classes' do
+          it 'rejects undefined classes with the recoverable JobClassNotDefinedError' do
             expect { JobRunner.new(msg_for('NoSuchJob')) }
-              .to raise_error(InvalidJobClassError, /is not defined/)
+              .to raise_error(JobClassNotDefinedError, /is not defined/)
+          end
+
+          it 'raises JobClassNotDefinedError as an InvalidJobClassError so existing rescues still catch it' do
+            expect(JobClassNotDefinedError).to be < InvalidJobClassError
+            expect { JobRunner.new(msg_for('NoSuchJob')) }
+              .to raise_error(InvalidJobClassError)
           end
 
           it 'rejects names that are not well-formed constant paths' do

@@ -44,7 +44,7 @@ module Aws
           it 'deletes the message and does not re-raise when the job class is invalid' do
             expect(JobRunner).to receive(:new).and_raise(InvalidJobClassError, 'File is not a valid job class')
             expect(msg).to receive(:delete)
-            expect(msg).to receive(:message_id).and_return('stub-id')
+            allow(msg).to receive(:message_id).and_return('stub-id')
             expect do
               executor.execute(msg)
               sleep(0.1) if defined?(JRUBY_VERSION)
@@ -55,11 +55,79 @@ module Aws
           it 'deletes the message and does not re-raise when the body cannot be parsed' do
             expect(JobRunner).to receive(:new).and_raise(JSON::ParserError.new('unexpected token'))
             expect(msg).to receive(:delete)
+            allow(msg).to receive(:message_id).and_return('stub-id')
             expect do
               executor.execute(msg)
               sleep(0.1) if defined?(JRUBY_VERSION)
               executor.shutdown # give the task a chance to run
             end.not_to raise_error
+          end
+
+          describe 'permanent failures' do
+            let(:error) { InvalidJobClassError.new('File is not a valid job class') }
+
+            before do
+              expect(JobRunner).to receive(:new).and_raise(error)
+              allow(msg).to receive(:message_id).and_return('stub-id')
+            end
+
+            it 'reports the failure to the error tracker before deleting' do
+              allow(msg).to receive(:delete)
+              expect(Rails.error).to receive(:report).with(
+                error,
+                handled: true,
+                context: { message_id: 'stub-id', body: body }
+              )
+              executor.execute(msg)
+              sleep(0.1) if defined?(JRUBY_VERSION)
+              executor.shutdown
+            end
+
+            context 'a permanent_failure_handler is configured' do
+              after { Aws::ActiveJob::SQS.config.permanent_failure_handler = nil }
+
+              it 'calls the handler with the error and message, then deletes' do
+                handler = double
+                expect(handler).to receive(:call).with(error, msg)
+                Aws::ActiveJob::SQS.config.permanent_failure_handler = handler
+                expect(msg).to receive(:delete)
+                executor.execute(msg)
+                sleep(0.1) if defined?(JRUBY_VERSION)
+                executor.shutdown
+              end
+
+              it 'leaves the message on the queue when the handler throws :skip_delete' do
+                Aws::ActiveJob::SQS.config.permanent_failure_handler =
+                  ->(_error, _message) { throw :skip_delete }
+                expect(msg).not_to receive(:delete)
+                expect do
+                  executor.execute(msg)
+                  sleep(0.1) if defined?(JRUBY_VERSION)
+                  executor.shutdown
+                end.not_to raise_error
+              end
+
+              it 'does not report to the error tracker when the handler throws :skip_delete' do
+                Aws::ActiveJob::SQS.config.permanent_failure_handler =
+                  ->(_error, _message) { throw :skip_delete }
+                expect(Rails.error).not_to receive(:report)
+                expect(msg).not_to receive(:delete)
+                executor.execute(msg)
+                sleep(0.1) if defined?(JRUBY_VERSION)
+                executor.shutdown
+              end
+
+              it 'deletes the message when the handler itself raises' do
+                Aws::ActiveJob::SQS.config.permanent_failure_handler =
+                  ->(_error, _message) { raise 'handler boom' }
+                expect(msg).to receive(:delete)
+                expect do
+                  executor.execute(msg)
+                  sleep(0.1) if defined?(JRUBY_VERSION)
+                  executor.shutdown
+                end.not_to raise_error
+              end
+            end
           end
 
           describe 'error_handler' do
