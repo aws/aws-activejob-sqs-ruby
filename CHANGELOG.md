@@ -1,4 +1,4 @@
-Unreleased Changes
+1.2.0 (2026-08-17)
 ------------------
 
 * Feature - Report a dropped job to the Rails error reporter and add an optional `permanent_failure_handler` so apps can keep unresolvable jobs on the queue for redelivery instead of losing them (#39).
