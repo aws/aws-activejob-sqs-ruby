@@ -120,6 +120,17 @@ module ActiveJob
             end.to raise_error(Aws::ActiveJob::SQS::FifoDelayNotSupportedError)
           end
 
+          it 'does not send any messages when a later job in the batch has a delay' do
+            expect(client).not_to receive(:send_message_batch)
+
+            jobs = Array.new(10) { TestJob.new('test') }
+            jobs << TestJob.new('test').set(wait: 1.minute)
+
+            expect do
+              ActiveJob.perform_all_later(jobs)
+            end.to raise_error(Aws::ActiveJob::SQS::FifoDelayNotSupportedError)
+          end
+
           it 'enqueues jobs with zero or negative delay' do
             expect(client).to receive(:send_message).with(
               hash_including(queue_url: 'https://queue-url.fifo', delay_seconds: 0)

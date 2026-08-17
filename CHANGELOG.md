@@ -1,6 +1,8 @@
 Unreleased Changes
 ------------------
 
+* Issue - `perform_all_later` no longer partially enqueues a batch before raising when one of the jobs has a delay on a FIFO queue (#40).
+
 1.1.1 (2026-08-12)
 ------------------
 

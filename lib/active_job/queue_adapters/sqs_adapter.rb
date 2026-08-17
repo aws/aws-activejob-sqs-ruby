@@ -26,6 +26,12 @@ module ActiveJob
       end
 
       def enqueue_all(jobs)
+        jobs.each do |job|
+          next unless job.scheduled_at
+
+          validate_fifo_delay!(job, Params.assured_delay_seconds(job.scheduled_at))
+        end
+
         enqueued_count = 0
         jobs.group_by(&:queue_name).each do |queue_name, same_queue_jobs|
           enqueued_count += enqueue_batches(queue_name, same_queue_jobs)
@@ -58,11 +64,7 @@ module ActiveJob
       def batch_entry(job)
         entry = Params.new(job, nil).entry
         entry[:id] = job.job_id
-        if job.scheduled_at
-          delay = Params.assured_delay_seconds(job.scheduled_at)
-          validate_fifo_delay!(job, delay)
-          entry[:delay_seconds] = delay
-        end
+        entry[:delay_seconds] = Params.assured_delay_seconds(job.scheduled_at) if job.scheduled_at
         entry
       end
 
